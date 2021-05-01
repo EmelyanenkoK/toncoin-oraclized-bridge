@@ -1,0 +1,12 @@
+(tuple) encode_number_to_text(int number) {
+  int len = 0;
+  int value = 0;
+  int mult = 1;
+  do {
+    (number, int res) = number.divmod(10);
+    value = value + (res + 48) * mult;
+    mult = mult * 256;
+    len = len + 1;
+  } until (number == 0);
+  return pair_ints(len, value);
+}
