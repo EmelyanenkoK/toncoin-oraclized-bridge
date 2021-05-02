@@ -164,6 +164,7 @@
     int id = cur_lt();
     builder new_outcoming_swap = begin_cell()
                                 .store_grams(amount)
+                                .store_uint(eth_address, 160)
                                 .store_uint(current_set_hash, 256)
                                 .store_dict(new_dict());
     outcoming_swaps~udict_set_builder(64, id, new_outcoming_swap);
@@ -291,8 +292,13 @@
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (slice old_swap_data, int found?) = outcoming_swaps~udict_delete_get?(64, swap_id);
     throw_unless(309, found?);
-    int outcoming_token_amount = old_swap_data~load_grams();
-    cell stored_signatures = old_swap_data~load_dict();
+    (int outcoming_token_amount,
+     int eth_address,
+     int _outdated_set_hash,
+     cell  stored_signatures) = (old_swap_data~load_grams(),
+                                 old_swap_data~load_uint(256),
+                                 old_swap_data~load_uint(256),
+                                 old_swap_data~load_dict());
     int oracle_id = -1;
     do {
       (oracle_id, slice sig, int found?) = signatures.udict_get_next?(256, oracle_id);
@@ -309,6 +315,7 @@
     } until (~ found?);
     builder outcoming_swap = begin_cell()
                               .store_grams(outcoming_token_amount)
+                              .store_uint(eth_address, 160)
                               .store_uint(current_set_hash, 256)
                               .store_dict(stored_signatures);
     (outcoming_swaps, int success?) = outcoming_swaps.udict_replace_builder?(256, swap_id, outcoming_swap);

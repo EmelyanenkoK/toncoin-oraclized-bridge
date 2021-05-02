@@ -14,7 +14,7 @@
 ;;                   complaints:(HashmapE OracleAddress complaint)
 ;;                    = OracleSetData;
 ;; swap_to_eth_id#_ swap_lt:uint64 = SwapToEthId;
-;; outcoming_swap#_ amount:Grams set_hash:uint256 signatures:(HashmapE SecpPubkey EthSignature) =  OutcomingSwap;
+;; outcoming_swap#_ amount:Grams eth_address:uint160 set_hash:uint256 signatures:(HashmapE SecpPubkey EthSignature) =  OutcomingSwap;
 ;; eth_signature#_ signature:bits520 = EthSignature;
 ;; NOTE!!! amount here is 64bit, not Grams: SHA256U requires divisibility by 8
 ;; Note id = SHA256U(<b eth_tx_hash 256 u, wc 8 u, addr_hash 256 u, amount 64 u, b>)

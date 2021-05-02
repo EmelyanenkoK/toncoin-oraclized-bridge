@@ -1,0 +1,49 @@
+(int, int) get_bridge_data() method_id {
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
+    return (total_staked, total_locked);
+}
+
+(int, int, tuple) get_outcoming_swap_data(int swap_lt) method_id {
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
+    (slice swap_data, int found?) = outcoming_swaps.udict_get?(64, swap_lt);
+    throw_unless(309, found?);
+    (int outcoming_token_amount,
+     int eth_address,
+     int _unused,
+     cell  stored_signatures) = (swap_data~load_grams(),
+                                 swap_data~load_uint(160),
+                                 swap_data~load_uint(256),
+                                 swap_data~load_dict());
+    tuple list = null();
+
+    int secp_key = -1;
+    do {
+      (secp_key, slice sig, int found?) = stored_signatures.udict_get_next?(256, secp_key);
+      if (found?) {
+        (int r, int s, int v) = (sig~load_uint(256),
+                                 sig~load_uint(256),
+                                 sig~load_uint(8));
+        list = cons( pair( secp_key, triple(r,s,v)), list);
+      }
+    } until (~ found?);
+    return (outcoming_token_amount, eth_address, list);
+}
+
+
+(int, int, int, int, int) get_incoming_swap_data(int swap_id) method_id {
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
+    (slice swap_data, int found?) = incoming_swaps.udict_get?(256, swap_id);
+    throw_unless(309, found?);
+    (int eth_tx, 
+     int wc,
+     int addr_hash,
+     int amount,
+     int auth_num,
+     cell auths) = (swap_data~load_uint(256),
+                    swap_data~load_int(8),
+                    swap_data~load_uint(256),
+                    swap_data~load_uint(64),
+                    swap_data~load_uint(16),
+                    swap_data~load_dict());
+   return (eth_tx, wc, addr_hash, amount, auth_num);
+}
