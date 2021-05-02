@@ -1,0 +1,49 @@
+"Asm.fif" include
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+
+
+"bridge.fif" =: codefile
+"new-bridge-query" =: savefile
+
+now =: nonce
+<{
+  SETCP0 ACCEPT
+  nonce INT
+  codefile include PUSHREF SETCODE
+}>s =: contract_code
+
+<b 0 Gram,
+   0 Gram,
+   0 256 u,
+   dictnew dict,
+   dictnew dict,
+   dictnew dict,
+   dictnew dict,
+b> =: contract_storage
+
+
+
+-1 =: wc
+
+<b b{00110} s, <b contract_code s, b> ref, contract_storage ref, b>
+dup =: state_init
+dup hashu wc swap 2constant contract_addr
+
+."Contract address = " contract_addr .addr cr
+
+contract_addr "bridge.addr" save-address-verbose
+
+."Non-bounceable address (for init): " contract_addr 7 .Addr cr
+."Bounceable address (for later access): " contract_addr 6 .Addr cr
+
+
+<b b> <s =: init_message
+
+<b b{1000100} s, contract_addr addr, b{000010} s, state_init <s s, b{0} s, init_message s, b>
+2 boc+>B
+savefile +".boc" tuck B>file
+."(Saved bridge contract creating query to file " type .")" cr
