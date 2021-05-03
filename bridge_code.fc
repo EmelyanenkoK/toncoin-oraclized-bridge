@@ -4,7 +4,12 @@
 
 (cell) get_current_oracle_set() {
   ;;//TODO
-  return begin_cell().end_cell();
+  return begin_cell()
+         .store_grams(1)
+         .store_uint(1,16)
+         .store_uint(0,32)
+         .store_dict(new_dict())
+         .end_cell();
 }
 
 
