@@ -169,6 +169,7 @@
                                 .store_dict(new_dict());
     outcoming_swaps~udict_set_builder(64, id, new_outcoming_swap);
     total_locked = total_locked + amount;
+    emit_log_simple(0xc0470ccf, begin_cell().store_uint(eth_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     save_data(_1, total_locked, current_set_hash, sets, candidates, outcoming_swaps, _7);
     if(is_text) {
       tuple OK = pair_ints(2, 0x4f4b);

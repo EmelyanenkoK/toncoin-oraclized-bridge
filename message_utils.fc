@@ -34,3 +34,14 @@
   send_raw_message(msg.end_cell(), mode);
 }
 
+() emit_log_simple (int event_id, slice data) impure inline {
+  var msg = begin_cell()
+                        .store_uint (12, 4) ;; ext_out_msg_info$11 src:MsgAddressInt ()
+                        .store_uint (1, 2)
+                        .store_uint (32, 9)
+                        .store_uint(event_id, 256)
+                        .store_uint(0, 64 + 32 + 2) ;; created_lt, created_at, init:Maybe, body:Either
+                        .store_slice(data)
+           .end_cell();
+  send_raw_message(msg, 2);
+}
