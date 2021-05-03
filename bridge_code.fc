@@ -190,12 +190,15 @@
                           .store_uint(amount, 64)
                          .end_cell().begin_parse();
     int swap_id = string_hash(swap_id_seed);
-    builder incoming_swap = begin_cell()
+    cell incoming_swap = begin_cell()
+                            .store_uint(0, 1)
                             .store_slice(swap_id_seed)
+                            .store_int(-1, 33) ;; not executed - -1 execution time
                             .store_uint(current_set_hash, 256)
                             .store_uint(0, 16)
-                            .store_dict(new_dict());
-    (incoming_swaps, int success?) = incoming_swaps.udict_add_builder?(256, swap_id, incoming_swap);
+                            .store_dict(new_dict())
+                         .end_cell();
+    (incoming_swaps, int success?) = incoming_swaps.udict_add_ref?(256, swap_id, incoming_swap);
     throw_unless(307, success?);
     save_data(_1, total_locked, current_set_hash, sets, candidates, _6, incoming_swaps);
     if(is_text) {
@@ -246,9 +249,13 @@
     cell signatures = in_msg~load_dict();
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell incoming_swaps) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
-    (slice old_swap_data, int found?) = incoming_swaps~udict_delete_get?(256, swap_id);
+    (cell _old_swap_data, int found?) = incoming_swaps~udict_delete_get_ref?(256, swap_id);
     throw_unless(308, found?);
+    slice old_swap_data = _old_swap_data.begin_parse();
+    int executed? = old_swap_data~load_uint(1);
+    throw_if(315, executed?);
     slice swap_body = old_swap_data~load_bits(256 + 8 + 256 + 64);
+    int execution_time = old_swap_data~load_int(33);
     int auth_num = old_swap_data~load_uint(16);
     cell authorizations = old_swap_data~load_dict();
     if(set_updated?) {
@@ -269,19 +276,32 @@
       }
     } until (~ found?);
     int body = 0;
+    cell incoming_swap = null();
     if(auth_num > min_auth_num) {
       int unlocked = execute_swap(swap_body);
       total_locked = total_locked - unlocked;
       body = 1;
-    } else {
-      builder incoming_swap = begin_cell()
+      incoming_swap = begin_cell()
+                              .store_uint(1,1)
                               .store_slice(swap_body)
+                              .store_int(now(), 33)
                               .store_uint(current_set_hash, 256)
                               .store_uint(auth_num, 16)
-                              .store_dict(authorizations);
-      (incoming_swaps, int success?) = incoming_swaps.udict_replace_builder?(256, swap_id, incoming_swap);
-      throw_unless(308, success?);
+                              .store_dict(authorizations)
+                      .end_cell();
+
+    } else {
+      incoming_swap = begin_cell()
+                              .store_uint(1,1)
+                              .store_slice(swap_body)
+                              .store_int(-1, 33)
+                              .store_uint(current_set_hash, 256)
+                              .store_uint(auth_num, 16)
+                              .store_dict(authorizations)
+                      .end_cell();
     }
+    (incoming_swaps, int success?) = incoming_swaps.udict_add_ref?(256, swap_id, incoming_swap);
+    throw_unless(308, success?);
     save_data(_1, total_locked, current_set_hash, sets, candidates, _6, incoming_swaps);
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, body, 0, 64 + 2);
 }

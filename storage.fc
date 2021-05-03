@@ -19,8 +19,10 @@
 ;; NOTE!!! amount here is 64bit, not Grams: SHA256U requires divisibility by 8
 ;; Note id = SHA256U(<b ext_chain_tx_hash 256 u, wc 8 u, addr_hash 256 u, amount 64 u, b>)
 ;; swap_to_ton_id#_ id:uint256 = SwapToTonId;
-;; incoming_swap#_ ext_chain_tx_hash:uint256
+;; incoming_swap#_ executed:bool
+;;                 ext_chain_tx_hash:uint256
 ;;                 wc:int8 addr_hash:uint256 amount:uint64
+;;                 execution_time:int33
 ;;                 set_hash:uint256 authorization_num:uint16 authorizations:(HashmapE OracleAddress bool) = IncomingSwap;
 ;; candidate#_ credit:Grams oracle:Oracle = Candidate;
 ;; set_hash#_ hash:uint256 = SetHash;
@@ -31,7 +33,7 @@
 ;;             sets:(HashmapE SetHash OracleSetData)
 ;;             candidates:(HashmapE OracleAddress Candidate)
 ;;             outcoming_swaps:(HashmapE SwapToEthId OutcomingSwap)
-;;             incoming_swaps:(HashmapE SwapToTonId IncomingSwap)
+;;             incoming_swaps:(HashmapE SwapToTonId ^IncomingSwap)
 ;;
 ;;
 ;; 71 config parameter

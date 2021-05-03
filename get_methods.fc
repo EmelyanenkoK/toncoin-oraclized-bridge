@@ -30,20 +30,26 @@
 }
 
 
-(int, int, int, int, int) get_incoming_swap_data(int swap_id) method_id {
+(int, int, int, int, int, int, int) get_incoming_swap_data(int swap_id) method_id {
     (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
-    (slice swap_data, int found?) = incoming_swaps.udict_get?(256, swap_id);
+    (cell _swap_data, int found?) = incoming_swaps.udict_get_ref?(256, swap_id);
     throw_unless(309, found?);
-    (int ext_chain_tx, 
+    slice swap_data = _swap_data.begin_parse();
+    (
+     int executed?,
+     int ext_chain_tx, 
      int wc,
      int addr_hash,
      int amount,
+     int execution_utime,
      int auth_num,
-     cell auths) = (swap_data~load_uint(256),
+     cell auths) = (swap_data~load_uint(0),
+                    swap_data~load_uint(256),
                     swap_data~load_int(8),
                     swap_data~load_uint(256),
                     swap_data~load_uint(64),
+                    swap_data~load_int(33),
                     swap_data~load_uint(16),
                     swap_data~load_dict());
-   return (ext_chain_tx, wc, addr_hash, amount, auth_num);
+   return (executed?, ext_chain_tx, wc, addr_hash, amount, execution_utime, auth_num);
 }
