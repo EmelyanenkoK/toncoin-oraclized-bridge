@@ -13,13 +13,13 @@
 ;;                   locked_stakes:(HashmapE OracleAddress Grams)
 ;;                   complaints:(HashmapE OracleAddress complaint)
 ;;                    = OracleSetData;
-;; swap_to_eth_id#_ swap_lt:uint64 = SwapToEthId;
-;; outcoming_swap#_ amount:Grams eth_address:uint160 set_hash:uint256 signatures:(HashmapE SecpPubkey EthSignature) =  OutcomingSwap;
-;; eth_signature#_ signature:bits520 = EthSignature;
+;; swap_to_external_chain_id#_ swap_lt:uint64 = SwapToExtChainId;
+;; outcoming_swap#_ amount:Grams external_address:uint160 set_hash:uint256 signatures:(HashmapE SecpPubkey SecpSignature) =  OutcomingSwap;
+;; secp_signature#_ signature:bits520 = SecpSignature;
 ;; NOTE!!! amount here is 64bit, not Grams: SHA256U requires divisibility by 8
-;; Note id = SHA256U(<b eth_tx_hash 256 u, wc 8 u, addr_hash 256 u, amount 64 u, b>)
+;; Note id = SHA256U(<b ext_chain_tx_hash 256 u, wc 8 u, addr_hash 256 u, amount 64 u, b>)
 ;; swap_to_ton_id#_ id:uint256 = SwapToTonId;
-;; incoming_swap#_ eth_tx_hash:256
+;; incoming_swap#_ ext_chain_tx_hash:uint256
 ;;                 wc:int8 addr_hash:uint256 amount:uint64
 ;;                 set_hash:uint256 authorization_num:uint16 authorizations:(HashmapE OracleAddress bool) = IncomingSwap;
 ;; candidate#_ credit:Grams oracle:Oracle = Candidate;
@@ -37,8 +37,8 @@
 ;; 71 config parameter
 ;; oracle#_ ed25519_key:uint256 secp256k1:uint256 = Oracle;
 ;; oracle_address#_ address_hash:uint256 = OracleAddress;
-;; oracle_set#_ flat_stake:Grams min_auth_num:uint16 seqno:uint32 oracles:(HashMapE uint16 OracleAddress) = EthereumOracleSet;
-;; ethereum_oracles#_ current_set:EthereumOracleSet = ConfigParam 71;
+;; oracle_set#_ flat_stake:Grams min_auth_num:uint16 seqno:uint32 oracles:(HashMapE uint16 OracleAddress) = ExtChainOracleSet;
+;; external_chain_oracles#_ current_set:ExtChainOracleSet = ConfigParam 71;
 
 
 

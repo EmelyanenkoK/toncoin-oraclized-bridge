@@ -136,7 +136,7 @@
 
 
 (int) execute_swap (slice swap_data) impure {
-  (int eth_hash,
+  (int ext_chain_hash,
    int wc,
    int addr_hash,
    int amount) = (swap_data~load_uint(256),
@@ -149,27 +149,27 @@
     .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
     .store_grams(amount)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-    .store_uint(eth_hash, 256); ;;// TODO send eth_hash as text
+    .store_uint(ext_chain_hash, 256); ;;// TODO send ext_chain_hash as text
   send_raw_message(msg.end_cell(), 0);
   return amount;
 }
 
 
-() create_swap_to_eth(int eth_address, int amount, slice s_addr, int query_id, int is_text) impure {
-    ;; create swap to eth
-    amount = amount - swap_to_eth_fee(amount);
+() create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
+    ;; create swap to external chain to destination address
+    amount = amount - swap_to_ext_chain_fee(amount);
     throw_unless(306, amount > 0);    
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell _7) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     int id = cur_lt();
     builder new_outcoming_swap = begin_cell()
                                 .store_grams(amount)
-                                .store_uint(eth_address, 160)
+                                .store_uint(destination_address, 160)
                                 .store_uint(current_set_hash, 256)
                                 .store_dict(new_dict());
     outcoming_swaps~udict_set_builder(64, id, new_outcoming_swap);
     total_locked = total_locked + amount;
-    emit_log_simple(0xc0470ccf, begin_cell().store_uint(eth_address, 160).store_uint(amount, 64).end_cell().begin_parse());
+    emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     save_data(_1, total_locked, current_set_hash, sets, candidates, outcoming_swaps, _7);
     if(is_text) {
       tuple OK = pair_ints(2, 0x4f4b);
@@ -180,11 +180,11 @@
     }
 }
 
-() create_swap_to_ton(int wc, int addr_hash, int eth_tx_hash, int amount, slice s_addr, int query_id, int is_text) impure {
+() create_swap_to_ton(int wc, int addr_hash, int ext_chain_tx_hash, int amount, slice s_addr, int query_id, int is_text) impure {
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell incoming_swaps) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     slice swap_id_seed = begin_cell()
-                          .store_uint(eth_tx_hash, 256)
+                          .store_uint(ext_chain_tx_hash, 256)
                           .store_int(wc, 8)
                           .store_uint(addr_hash, 256)
                           .store_uint(amount, 64)
@@ -286,7 +286,7 @@
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, body, 0, 64 + 2);
 }
 
-() submit_signatures_for_eth(slice in_msg, slice s_addr, int query_id) {
+() submit_signatures_for_external_chain(slice in_msg, slice s_addr, int query_id) {
     int swap_id = in_msg~load_uint(64);
     cell signatures = in_msg~load_dict();
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell _7) = load_data();
@@ -294,7 +294,7 @@
     (slice old_swap_data, int found?) = outcoming_swaps~udict_delete_get?(64, swap_id);
     throw_unless(309, found?);
     (int outcoming_token_amount,
-     int eth_address,
+     int ext_chain_address,
      int _outdated_set_hash,
      cell  stored_signatures) = (old_swap_data~load_grams(),
                                  old_swap_data~load_uint(256),
@@ -304,7 +304,7 @@
     do {
       (oracle_id, slice sig, int found?) = signatures.udict_get_next?(256, oracle_id);
       ;; //NOTE we cannot check secp signatures, thus we cannot trust mass signatures storing
-      ;; //for eth signatures can be sumbited only by oracles themselves for authorization
+      ;; //for secp, signatures can be sumbited only by oracles themselves for authorization
       (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
       throw_unless(310, (oracle_id == src_addr_hash) & (src_wc == -1));
       if (found?) {
@@ -316,7 +316,7 @@
     } until (~ found?);
     builder outcoming_swap = begin_cell()
                               .store_grams(outcoming_token_amount)
-                              .store_uint(eth_address, 160)
+                              .store_uint(ext_chain_address, 160)
                               .store_uint(current_set_hash, 256)
                               .store_dict(stored_signatures);
     (outcoming_swaps, int success?) = outcoming_swaps.udict_replace_builder?(256, swap_id, outcoming_swap);
@@ -330,7 +330,7 @@
     if(swap_to_ton?) {
       return submit_signatures_for_ton(in_msg, s_addr, query_id);
     } else {
-      return submit_signatures_for_eth(in_msg, s_addr, query_id);
+      return submit_signatures_for_external_chain(in_msg, s_addr, query_id);
     }
 }
 
@@ -375,16 +375,16 @@
     return withdraw_stake(amount, s_addr, query_id, false);
   }
   if (op == 3) {
-    int eth_address = in_msg~load_uint(160);
-    return create_swap_to_eth(eth_address, msg_value, s_addr, query_id, false);
+    int destination_address = in_msg~load_uint(160);
+    return create_swap_from_ton(destination_address, msg_value, s_addr, query_id, false);
   }
   if (op == 4) {
     ;; create swap to TON
     int wc = in_msg~load_int(8);
     int address = in_msg~load_uint(256);
     int amount = in_msg~load_grams();
-    int eth_tx_hash = in_msg~load_uint(256); 
-    return create_swap_to_ton(wc, address, amount, eth_tx_hash, s_addr, query_id, false);
+    int ext_chain_tx_hash = in_msg~load_uint(256); 
+    return create_swap_to_ton(wc, address, amount, ext_chain_tx_hash, s_addr, query_id, false);
   }
   ;; Non-text API only
   if (op == 5) {

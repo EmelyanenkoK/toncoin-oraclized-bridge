@@ -8,7 +8,7 @@
     (slice swap_data, int found?) = outcoming_swaps.udict_get?(64, swap_lt);
     throw_unless(309, found?);
     (int outcoming_token_amount,
-     int eth_address,
+     int ext_chain_address,
      int _unused,
      cell  stored_signatures) = (swap_data~load_grams(),
                                  swap_data~load_uint(160),
@@ -26,7 +26,7 @@
         list = cons( pair( secp_key, triple(r,s,v)), list);
       }
     } until (~ found?);
-    return (outcoming_token_amount, eth_address, list);
+    return (outcoming_token_amount, ext_chain_address, list);
 }
 
 
@@ -34,7 +34,7 @@
     (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
     (slice swap_data, int found?) = incoming_swaps.udict_get?(256, swap_id);
     throw_unless(309, found?);
-    (int eth_tx, 
+    (int ext_chain_tx, 
      int wc,
      int addr_hash,
      int amount,
@@ -45,5 +45,5 @@
                     swap_data~load_uint(64),
                     swap_data~load_uint(16),
                     swap_data~load_dict());
-   return (eth_tx, wc, addr_hash, amount, auth_num);
+   return (ext_chain_tx, wc, addr_hash, amount, auth_num);
 }
