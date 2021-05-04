@@ -42,13 +42,15 @@
      int addr_hash,
      int amount,
      int execution_utime,
+     int set_hash,
      int auth_num,
-     cell auths) = (swap_data~load_uint(0),
+     cell auths) = (swap_data~load_uint(1),
                     swap_data~load_uint(256),
                     swap_data~load_int(8),
                     swap_data~load_uint(256),
                     swap_data~load_uint(64),
                     swap_data~load_int(33),
+                    swap_data~load_uint(256),
                     swap_data~load_uint(16),
                     swap_data~load_dict());
    return (executed?, ext_chain_tx, wc, addr_hash, amount, execution_utime, auth_num);
