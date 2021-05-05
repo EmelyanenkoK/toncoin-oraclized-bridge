@@ -352,7 +352,7 @@
   if (op == 5) {
     ;; submit signatures
     int voting_id = in_msg~load_uint(256);
-    slice signature = in_msg~load_bits(512);
+    slice signature = in_msg~load_bits(520);
     return vote_on_external_chain(s_addr, query_id, voting_id, signature);
   }
 }
