@@ -13,17 +13,23 @@
 ;;                   locked_stakes:(HashmapE OracleAddress Grams)
 ;;                   complaints:(HashmapE OracleAddress complaint)
 ;;                    = OracleSetData;
-;; swap_to_external_chain_id#_ swap_lt:uint64 = SwapToExtChainId;
-;; outcoming_swap#_ amount:Grams external_address:uint160 set_hash:uint256 signatures:(HashmapE SecpPubkey SecpSignature) =  OutcomingSwap;
 ;; secp_signature#_ signature:bits520 = SecpSignature;
-;; NOTE!!! amount here is 64bit, not Grams: SHA256U requires divisibility by 8
-;; Note id = SHA256U(<b ext_chain_tx_hash 256 u, wc 8 u, addr_hash 256 u, amount 64 u, b>)
-;; swap_to_ton_id#_ id:uint256 = SwapToTonId;
-;; incoming_swap#_ executed:bool
-;;                 ext_chain_tx_hash:uint256
-;;                 wc:int8 addr_hash:uint256 amount:uint64
-;;                 execution_time:int33
-;;                 set_hash:uint256 authorization_num:uint16 authorizations:(HashmapE OracleAddress bool) = IncomingSwap;
+;; external_vote_envelope#_ set_hash:uint256 signatures:(HashmapE SecpPubkey SecpSignature) = ExtVoteEnvelop
+;;
+;;
+;; swap_to_ton#00 ext_chain_tx_hash:uint256 wc:int8 addr_hash:uint256 amount:uint64 = TonVoteEntity;
+;; complaint#01 body:bits512 = TonVoteEntity;
+;;
+;; ton_vote_envelope#_ 
+;;                     executed:bool execution_time:int33
+;;                     set_hash:uint256 authorization_num:uint16 authorizations:(HashmapE OracleAddress bool)
+;;                     vote_entity:TonVoteEntity 
+;; = TonVoteEnvelop;
+;;
+;; NOTE!!! Important all TonVoteEntity should contain ceil amount of bytes
+;; Note id = SHA256U(TonVoteEntity slice)
+;; ton_vote_id#_ id:uint256 = TonVotingId;
+
 ;; candidate#_ credit:Grams oracle:Oracle = Candidate;
 ;; set_hash#_ hash:uint256 = SetHash;
 ;; storage#_
@@ -32,8 +38,8 @@
 ;;             current_set_hash:SetHash
 ;;             sets:(HashmapE SetHash OracleSetData)
 ;;             candidates:(HashmapE OracleAddress Candidate)
-;;             outcoming_swaps:(HashmapE SwapToEthId OutcomingSwap)
-;;             incoming_swaps:(HashmapE SwapToTonId ^IncomingSwap)
+;;             externalVotings:(HashmapE ExtVotingId ExtVoteEnvelop)
+;;             tonVotings:(HashmapE TonVotingId ^TonVoteEnvelop)
 ;;
 ;;
 ;; 71 config parameter
@@ -63,15 +69,15 @@
               int current_set_hash,
               cell sets,
               cell candidates,
-              cell outcoming_swaps,
-              cell incoming_swaps) impure inline {
+              cell external_votes,
+              cell ton_votes) impure inline {
   var st = begin_cell().store_grams(total_staked)
                        .store_grams(total_locked)
                        .store_uint(current_set_hash, 256)
                        .store_dict(sets)
                        .store_dict(candidates)
-                       .store_dict(outcoming_swaps)
-                       .store_dict(incoming_swaps)
+                       .store_dict(external_votes)
+                       .store_dict(ton_votes)
             .end_cell();
   set_data(st);
 }
