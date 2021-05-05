@@ -235,12 +235,12 @@
 }
 
 () vote_on_ton (slice s_addr, int query_id, slice voting_entity) impure {
-    (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votes) = load_data();
+    (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
     
     int voting_id = string_hash(voting_entity);
-    (cell _old_voting_data, int voting_found?) = ton_votes~udict_delete_get_ref?(256, voting_id);
+    (cell _old_voting_data, int voting_found?) = ton_votings~udict_delete_get_ref?(256, voting_id);
     (int executed?, int execution_time, int set_hash, int authorization_num, cell authorizations) =
     (0,             -1,                 0,            0,                     new_dict());
     if(voting_found?) {
@@ -277,9 +277,9 @@
                                .store_dict(authorizations)
                                .store_slice(voting_entity)
                            .end_cell();
-    (ton_votes, int success_storing?) = ton_votes.udict_add_ref?(256, voting_id, new_voting_data);
+    (ton_votings, int success_storing?) = ton_votings.udict_add_ref?(256, voting_id, new_voting_data);
     throw_unless(323, success_storing?);
-    save_data(_1, total_locked, current_set_hash, sets, candidates, _6, ton_votes);
+    save_data(_1, total_locked, current_set_hash, sets, candidates, _6, ton_votings);
     return send_receipt_message(s_addr, 0x10000 + 4, query_id, voting_id, 0, 64);
 }
 

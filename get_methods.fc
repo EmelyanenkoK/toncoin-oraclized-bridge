@@ -1,19 +1,15 @@
 (int, int) get_bridge_data() method_id {
-    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell external_votings, cell ton_votings) = load_data();
     return (total_staked, total_locked);
 }
 
-(int, int, tuple) get_outcoming_swap_data(int swap_lt) method_id {
-    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
-    (slice swap_data, int found?) = outcoming_swaps.udict_get?(64, swap_lt);
+(tuple) get_external_voting_data(int voting_id) method_id {
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell external_votings, cell ton_votings) = load_data();
+    (slice voting_data, int found?) = external_votings.udict_get?(256, voting_id);
     throw_unless(309, found?);
-    (int outcoming_token_amount,
-     int ext_chain_address,
-     int _unused,
-     cell  stored_signatures) = (swap_data~load_grams(),
-                                 swap_data~load_uint(160),
-                                 swap_data~load_uint(256),
-                                 swap_data~load_dict());
+    (int _unused,
+     cell  stored_signatures) = (voting_data~load_uint(256),
+                                 voting_data~load_dict());
     tuple list = null();
 
     int secp_key = -1;
@@ -26,32 +22,33 @@
         list = cons( pair( secp_key, triple(r,s,v)), list);
       }
     } until (~ found?);
-    return (outcoming_token_amount, ext_chain_address, list);
+    return (list);
 }
 
 
-(int, int, int, int, int, int, int) get_incoming_swap_data(int swap_id) method_id {
-    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell outcoming_swaps, cell incoming_swaps) = load_data();
-    (cell _swap_data, int found?) = incoming_swaps.udict_get_ref?(256, swap_id);
+(int, int, int, tuple) get_ton_voting_status(int voting_id) method_id {
+    (int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell external_votes, cell ton_votings) = load_data();
+    (cell _voting_data, int found?) = ton_votings.udict_get_ref?(256, voting_id);
     throw_unless(309, found?);
-    slice swap_data = _swap_data.begin_parse();
+    slice voting_data = _voting_data.begin_parse();
     (
      int executed?,
-     int ext_chain_tx, 
-     int wc,
-     int addr_hash,
-     int amount,
      int execution_utime,
      int set_hash,
      int auth_num,
-     cell auths) = (swap_data~load_uint(1),
-                    swap_data~load_uint(256),
-                    swap_data~load_int(8),
-                    swap_data~load_uint(256),
-                    swap_data~load_uint(64),
-                    swap_data~load_int(33),
-                    swap_data~load_uint(256),
-                    swap_data~load_uint(16),
-                    swap_data~load_dict());
-   return (executed?, ext_chain_tx, wc, addr_hash, amount, execution_utime, auth_num);
+     cell auths) = (voting_data~load_uint(1),
+                    voting_data~load_int(33),
+                    voting_data~load_uint(256),
+                    voting_data~load_uint(16),
+                    voting_data~load_dict());
+    tuple list = null();
+    int oid = -1;
+    do {
+      (oid, slice _unused, int found?) = auths.udict_get_next?(256, oid);
+      if (found?) {
+        list = cons( oid, list);
+      }
+    } until (~ found?);
+   
+   return (executed?, execution_utime, auth_num, list);
 }

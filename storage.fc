@@ -11,7 +11,6 @@
 ;;                   min_auth_num:uint16
 ;;                   keys:(HashmapE OracleAddress Oracle)
 ;;                   locked_stakes:(HashmapE OracleAddress Grams)
-;;                   complaints:(HashmapE OracleAddress complaint)
 ;;                    = OracleSetData;
 ;; secp_signature#_ signature:bits520 = SecpSignature;
 ;; external_vote_envelope#_ set_hash:uint256 signatures:(HashmapE SecpPubkey SecpSignature) = ExtVoteEnvelop
@@ -38,8 +37,8 @@
 ;;             current_set_hash:SetHash
 ;;             sets:(HashmapE SetHash OracleSetData)
 ;;             candidates:(HashmapE OracleAddress Candidate)
-;;             externalVotings:(HashmapE ExtVotingId ExtVoteEnvelop)
-;;             tonVotings:(HashmapE TonVotingId ^TonVoteEnvelop)
+;;             external_votings:(HashmapE ExtVotingId ExtVoteEnvelop)
+;;             ton_votings:(HashmapE TonVotingId ^TonVoteEnvelop)
 ;;
 ;;
 ;; 71 config parameter
@@ -69,15 +68,15 @@
               int current_set_hash,
               cell sets,
               cell candidates,
-              cell external_votes,
-              cell ton_votes) impure inline {
+              cell external_votings,
+              cell ton_votings) impure inline {
   var st = begin_cell().store_grams(total_staked)
                        .store_grams(total_locked)
                        .store_uint(current_set_hash, 256)
                        .store_dict(sets)
                        .store_dict(candidates)
-                       .store_dict(external_votes)
-                       .store_dict(ton_votes)
+                       .store_dict(external_votings)
+                       .store_dict(ton_votings)
             .end_cell();
   set_data(st);
 }
