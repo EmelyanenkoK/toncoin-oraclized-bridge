@@ -10,7 +10,7 @@
   authorized_oracles~udict_set_builder(16, 2, begin_cell().store_uint(0x9fc4608fb8f28d47a4f819c171350b8b5394f290b28402d9315847c0d70056cb,256));
   return begin_cell()
          .store_grams(1)
-         .store_uint(1,16)
+         .store_uint(2,16)
          .store_uint(0,32)
          .store_dict(authorized_oracles)
          .end_cell();
@@ -37,7 +37,7 @@
     cell locked_stakes = new_dict();
     int _ind = -1;
     do {
-      (_ind, slice oracle_id_, int found?) = oracles.udict_get_next?(256, _ind);
+      (_ind, slice oracle_id_, int found?) = oracles.udict_get_next?(16, _ind);
       if (found?) {
         int oracle_id = oracle_id_~load_uint(256);
         (slice candidate, int found_candidate?) = candidates~udict_delete_get?(256, oracle_id);
@@ -199,7 +199,7 @@
     sets~reward_set(current_set_hash, reward);
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     var msg = begin_cell()
-      .store_uint(0x18, 6)
+      .store_uint(0x10, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 0 0 0 00
       .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
       .store_grams(amount)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
@@ -250,7 +250,7 @@
        set_hash, 
        authorization_num, 
        authorizations) =
-                         (old_voting_data~load_uint(1),
+                         (old_voting_data~load_int(1),
                           old_voting_data~load_int(33),
                           old_voting_data~load_uint(256),
                           old_voting_data~load_uint(16),
@@ -270,7 +270,7 @@
       execution_time = now();
     }
     cell new_voting_data = begin_cell()
-                               .store_uint(executed?, 1)
+                               .store_int(executed?, 1)
                                .store_int(execution_time, 33)
                                .store_uint(current_set_hash, 256)
                                .store_uint(authorization_num, 16)
