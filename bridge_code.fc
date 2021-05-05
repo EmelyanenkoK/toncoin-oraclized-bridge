@@ -4,11 +4,15 @@
 
 (cell) get_current_oracle_set() {
   ;;//TODO
+  cell authorized_oracles = new_dict();
+  authorized_oracles~udict_set_builder(16, 0, begin_cell().store_uint(0x5fc2c9192c4b860df613440b6fb7d93e984764688b249143ac1303f0d70cd793,256));
+  authorized_oracles~udict_set_builder(16, 1, begin_cell().store_uint(0x233f3ae14d89682a04c2b0680414dc7b39d1feb09f7c7ad267c2b2154ac1711f,256));
+  authorized_oracles~udict_set_builder(16, 2, begin_cell().store_uint(0x9fc4608fb8f28d47a4f819c171350b8b5394f290b28402d9315847c0d70056cb,256));
   return begin_cell()
          .store_grams(1)
          .store_uint(1,16)
          .store_uint(0,32)
-         .store_dict(new_dict())
+         .store_dict(authorized_oracles)
          .end_cell();
 }
 
