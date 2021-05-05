@@ -66,8 +66,7 @@
                               .store_grams(0)
                               .store_uint(min_auth_num,16)
                               .store_dict(oracle_keys)
-                              .store_dict(locked_stakes)
-                              .store_dict(new_dict()); ;; complaints
+                              .store_dict(locked_stakes);
                               
     (sets, int success?) = sets.udict_add_builder?(256, current_set_hash, oracle_set_data);
     ;; Exception will be thrown if existed and non removed set are going to be rewritten
@@ -141,16 +140,35 @@
     }
 }
 
+(cell, ()) ~reward_set (cell sets, int current_set_hash, amount) impure {
+    (slice old_set_data, int found?) = sets~udict_delete_get?(256, current_set_hash);
+    throw_unless(326, found?);
+    (int locked, int unrewarded_stake, int reward) = (old_set_data~load_uint(1),
+                                                     old_set_data~load_grams(),
+                                                     old_set_data~load_grams());
+    reward = reward + amount;
+    builder oracle_set_data = begin_cell()
+                              .store_uint(1,1)
+                              .store_grams(unrewarded_stake)
+                              .store_grams(reward)
+                              .store_slice(old_set_data);
+                              
+    (sets, int success?) = sets.udict_add_builder?(256, current_set_hash, oracle_set_data);
+    throw_unless(326, success?);
+    return (sets, ());
+}
 
 
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     ;; create swap to external chain to destination address
-    amount = amount - swap_to_ext_chain_fee(amount);
+    (int reward, int network_fee) = swap_to_ext_chain_fee(amount);
+    amount = amount - reward - network_fee;
     throw_unless(306, amount > 0);    
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     total_locked = total_locked + amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
+    sets~reward_set(current_set_hash, reward);
     save_data(_1, total_locked, current_set_hash, sets, candidates, _6, _7);
     if(is_text) {
       tuple OK = pair_ints(2, 0x4f4b);
@@ -172,6 +190,9 @@
                     voting_data~load_int(8),
                     voting_data~load_uint(256),
                     voting_data~load_uint(64));
+    (int reward, int network_fee) = swap_to_ton_fee(amount);
+    amount = amount - reward - network_fee;
+    sets~reward_set(current_set_hash, reward);
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     var msg = begin_cell()
       .store_uint(0x18, 6)
