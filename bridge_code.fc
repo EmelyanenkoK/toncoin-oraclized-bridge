@@ -233,7 +233,7 @@
                           old_voting_data~load_uint(256),
                           old_voting_data~load_uint(16),
                           old_voting_data~load_dict());
-      if(set_updated?) {
+      if(current_set_hash != set_hash) {
         ;; remove signatures signed by oracle not presented in current set
         authorizations~remove_outdated_authorizations(oracle_keys);
       }
