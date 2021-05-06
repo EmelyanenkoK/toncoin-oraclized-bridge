@@ -84,7 +84,7 @@
   return ((sets, candidates, current_set_hash), (set_updated?, min_auth_num, oracle_keys));
 }
 
-() deposit_stake(int msg_value, int ed_pubkey, int secp_pubkey, slice s_addr, int query_id, int is_text) impure {
+() deposit_stake(int msg_value, int ed_pubkey, int secp_pubkey, slice s_addr, int query_id) impure {
     (int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
@@ -107,16 +107,10 @@
                             .store_uint(secp_pubkey, 256);
     candidates~udict_set_builder(256, src_addr_hash, new_candidate_data);
     save_data(total_stake, _2, current_set_hash, sets, candidates, _6, _7);
-    if(is_text) {
-      tuple OK = pair_ints(2, 0x4f4b);
-      tuple list = cons(OK, cons(encode_number_to_text(amount), empty_tuple()));
-      return send_text_receipt_message(s_addr, list, fee / 10, 2);
-    } else {
-      return send_receipt_message(s_addr, 0x10000 + 1, query_id, 0, fee / 10, 2);
-    }
+    return send_receipt_message(s_addr, 0x10000 + 1, query_id, 0, fee / 10, 2);
 }
 
-() withdraw_stake(int amount, slice s_addr, int query_id, int is_text) impure {
+() withdraw_stake(int amount, slice s_addr, int query_id) impure {
     (int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
@@ -135,13 +129,7 @@
       candidates~udict_set_builder(256, src_addr_hash, new_candidate_data);
     }
     save_data(total_stake, _2, current_set_hash, sets, candidates, _6, _7);
-    if(is_text) {
-      tuple OK = pair_ints(2, 0x4f4b);
-      tuple list = cons(OK, cons(encode_number_to_text(amount), empty_tuple()));
-      return send_text_receipt_message(s_addr, list, amount - fee, 2);
-    } else {
-      return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 2);
-    }
+    return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 2);
 }
 
 (cell, ()) ~reward_set (cell sets, int current_set_hash, amount) impure {
@@ -176,7 +164,7 @@
     save_data(_1, total_locked, current_set_hash, sets, candidates, _6, _7);
     if(is_text) {
       tuple OK = pair_ints(2, 0x4f4b);
-      tuple list = cons(OK, empty_tuple());
+      tuple list = cons(OK, cons(encode_number_to_text(amount), empty_tuple()));
       return send_text_receipt_message(s_addr, list, 100000000, 2);
     } else {
       return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 2);
@@ -309,6 +297,11 @@
 }
 
 () process_comment_api_request (slice in_msg, int msg_value, slice s_addr) {
+    throw_unless(327, in_msg.slice_bits() < 56);
+    int command = in_msg~load_uint(56);
+    throw_unless(328, command == 126956573054063); ;; "swapTo" other commands are unsupported
+    int destination_address = in_msg~load_text_hex_number(20);
+    return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }
 
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
@@ -335,12 +328,12 @@
       in_msg = _cont.begin_parse();
     }
     (int ed_publey, int secp_pubkey) = (in_msg~load_uint(256), in_msg~load_uint(256));
-    return deposit_stake(msg_value, ed_publey, secp_pubkey, s_addr, query_id, false);
+    return deposit_stake(msg_value, ed_publey, secp_pubkey, s_addr, query_id);
   }
   if (op == 2) {
     ;; withdraw stake
     int amount = in_msg~load_grams();
-    return withdraw_stake(amount, s_addr, query_id, false);
+    return withdraw_stake(amount, s_addr, query_id);
   }
   if (op == 3) {
     int destination_address = in_msg~load_uint(160);
