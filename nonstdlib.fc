@@ -6,4 +6,4 @@ tuple pair_ints(int x, int y) asm "PAIR";
 
 (cell, int) udict_add_ref?(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUADDREF";
 (cell, (cell, int)) ~udict_delete_get_ref?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGETREF" "NULLSWAPIFNOT";
-
+forall X, Y, Z, W, T -> [X, Y, Z, W, T] tuple5(X x, Y y, Z z, W w, T t) asm "5 TUPLE";
