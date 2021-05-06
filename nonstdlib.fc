@@ -1,8 +1,5 @@
 int length(tuple list) asm "TLEN";
 forall X -> X get(tuple list, int index) asm "INDEXVARQ";
-int empty_tuple?(tuple c) asm "ISNULL";
-(int,int) unpair_ints(tuple t) asm "UNPAIR";
-tuple pair_ints(int x, int y) asm "PAIR";
 
 (cell, int) udict_add_ref?(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUADDREF";
 (cell, (cell, int)) ~udict_delete_get_ref?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGETREF" "NULLSWAPIFNOT";

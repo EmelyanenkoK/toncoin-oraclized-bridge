@@ -155,8 +155,8 @@
     sets~reward_set(current_set_hash, reward);
     save_data(_1, total_locked, current_set_hash, sets, candidates, _6, _7);
     if(is_text) {
-      tuple OK = pair_ints(2, 0x4f4b);
-      tuple list = cons(OK, cons(encode_number_to_text(amount), empty_tuple()));
+      [int, int] OK = pair(2, 0x4f4b);
+      tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
       return send_text_receipt_message(s_addr, list, 100000000, 2);
     } else {
       return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 2);
@@ -288,10 +288,14 @@
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
 }
 
-() process_comment_api_request (slice in_msg, int msg_value, slice s_addr) {
-    throw_unless(327, in_msg.slice_bits() < 56);
+() process_comment_api_request (slice in_msg, int msg_value, slice s_addr) impure {
+    if (in_msg.slice_empty?() & (in_msg.slice_refs() == 1)) {
+      cell _cont = in_msg~load_ref();
+      in_msg = _cont.begin_parse();
+    }
+    throw_unless(327, in_msg.slice_bits() >= 56);
     int command = in_msg~load_uint(56);
-    throw_unless(328, command == 126956573054063); ;; "swapTo" other commands are unsupported
+    throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
     int destination_address = in_msg~load_text_hex_number(20);
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }

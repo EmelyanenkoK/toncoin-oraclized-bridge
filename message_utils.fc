@@ -21,16 +21,15 @@
     .store_grams(grams)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
     .store_uint(0, 32);
-  if (~ text_tuple_list.empty_tuple?()) {
-    int _continue = -1;
-    do {
-      (var element, text_tuple_list) = uncons(text_tuple_list);
-      (int len, int value) = unpair_ints(element);
-      msg.store_uint(value, len * 8);
-      msg.store_uint(32, 8); ;;Space
-      _continue = ~ text_tuple_list.empty_tuple?();
-    } until (~ _continue);
-  }
+  do {
+   int _continue = ~ text_tuple_list.null?();
+   if(_continue) {
+      ([int, int] element, text_tuple_list) = uncons(text_tuple_list);
+      (int len, int value) = unpair(element);
+      msg~store_uint(value, len * 8);
+      msg~store_uint(32, 8); ;;Space
+   }
+  } until (~ _continue);
   send_raw_message(msg.end_cell(), mode);
 }
 
