@@ -10,6 +10,9 @@
 ((cell, cell, int), (int, int, cell)) ~check_update ((cell, cell, int) data) {
   (cell sets, cell candidates, int current_set_hash) = data;
   cell config_set = get_current_oracle_set();
+  if( config_set.cell_null?()) {
+    return ((sets, candidates, 0), (current_set_hash == 0, 0, new_dict()));
+  }
   int config_set_hash = cell_hash(config_set);
   int set_updated? = current_set_hash != config_set_hash;
   slice config_set_data = config_set.begin_parse();
@@ -30,12 +33,13 @@
       (_ind, slice oracle_id_, int found?) = oracles.udict_get_next?(16, _ind);
       if (found?) {
         int oracle_id = oracle_id_~load_uint(256);
-        (slice candidate, int found_candidate?) = candidates~udict_delete_get?(256, oracle_id);
-        slice candidate_copy = candidate;
+        (cell candidates', slice candidate, int found_candidate?) = candidates.udict_delete_get?(256, oracle_id);
         if(found_candidate?) {
+          slice candidate_copy = candidate;
           (int credit, slice pubkeys) = (candidate~load_grams(),
                                          candidate~load_bits(512));
           if(credit >= flat_stake) {
+            candidates = candidates';
             credit = credit - flat_stake;
             builder new_candidate = begin_cell()
                                     .store_grams(credit)
@@ -44,8 +48,6 @@
             oracle_keys~udict_set(256, oracle_id, pubkeys);
             unrewarded_stake = unrewarded_stake + flat_stake;
             locked_stakes~udict_set_builder(256, oracle_id, begin_cell().store_grams(flat_stake));
-          } else {
-            candidates~udict_set(256, oracle_id, candidate_copy);
           }
         }
       }
@@ -251,7 +253,7 @@
                                .store_int(executed?, 1)
                                .store_int(execution_time, 33)
                                .store_uint(current_set_hash, 256)
-                               .store_uint(authorization_num, 16)
+                               .store_uint(min_auth_num, 16)
                                .store_dict(authorizations)
                                .store_slice(voting_entity)
                            .end_cell();
