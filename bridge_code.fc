@@ -16,7 +16,7 @@
   int config_set_hash = cell_hash(config_set);
   int set_updated? = current_set_hash != config_set_hash;
   slice config_set_data = config_set.begin_parse();
-  (int flat_stake, 
+  (int flat_stake,
    int min_auth_num,
    int seqno,
    cell oracles) = (config_set_data~load_grams(),
@@ -63,7 +63,7 @@
                               .store_uint(min_auth_num,16)
                               .store_dict(oracle_keys)
                               .store_dict(locked_stakes);
-                              
+
     (sets, int success?) = sets.udict_add_builder?(256, current_set_hash, oracle_set_data);
     ;; Exception will be thrown if existed and non removed set are going to be rewritten
     ;; and it's data (credits) will be lost in this case we will effectively pause bridge
@@ -136,7 +136,7 @@
                               .store_grams(unrewarded_stake)
                               .store_grams(reward)
                               .store_slice(old_set_data);
-                              
+
     (sets, int success?) = sets.udict_add_builder?(256, current_set_hash, oracle_set_data);
     throw_unless(326, success?);
     return (sets, ());
@@ -147,7 +147,7 @@
     ;; create swap to external chain to destination address
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount);
     amount = amount - reward - network_fee;
-    throw_unless(306, amount > 0);    
+    throw_unless(306, amount > 0);
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     (sets, candidates, current_set_hash)~check_update();
     total_locked = total_locked + amount;
@@ -198,12 +198,12 @@
       ;; unless do nothing: incorrect complaint
       slice complaint_body = complaint.begin_parse();
       (int oracle_id, int fine_amount) = (complaint_body~load_uint(256), complaint_body~load_uint(64));
-      
+
       (slice old_set_data, int found?) = sets~udict_delete_get?(256, set_hash);
       if(found?) {
         ;; unless do nothing: set already released
-        (int locked, 
-         int unrewarded_stake, 
+        (int locked,
+         int unrewarded_stake,
          int reward,
          int auth_num,
          cell keys,
@@ -240,8 +240,8 @@
     (slice set_data, int found?) = sets~udict_delete_get?(256, set_hash);
     if(found?) {
       ;; unless do nothing: set already released
-      (int locked, 
-       int unrewarded_stake, 
+      (int locked,
+       int unrewarded_stake,
        int reward,
        int auth_num,
        cell keys,
@@ -306,17 +306,17 @@
     (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
-    
+
     int voting_id = string_hash(voting_entity);
     (cell _old_voting_data, int voting_found?) = ton_votings~udict_delete_get_ref?(256, voting_id);
     (int executed?, int execution_time, int set_hash, int authorization_num, cell authorizations) =
     (0,             -1,                 0,            0,                     new_dict());
     if(voting_found?) {
       slice old_voting_data = _old_voting_data.begin_parse();
-      (executed?, 
-       execution_time, 
-       set_hash, 
-       authorization_num, 
+      (executed?,
+       execution_time,
+       set_hash,
+       authorization_num,
        authorizations) =
                          (old_voting_data~load_int(1),
                           old_voting_data~load_int(33),
@@ -360,12 +360,12 @@
     (slice old_voting_data, int voting_found?) = externalVotings~udict_delete_get?(256, voting_id);
     cell signatures = new_dict();
     if(voting_found?) {
-      (int _set_hash, 
+      (int _set_hash,
        signatures) =
                          (old_voting_data~load_uint(256),
                           old_voting_data~load_dict());
     }
-    (int ed_key, int secp_key) = (keys~load_uint(256), keys~load_uint(256)); 
+    (int ed_key, int secp_key) = (keys~load_uint(256), keys~load_uint(256));
     (signatures, int success?) = signatures.udict_add?(256, secp_key, signature);
     throw_unless(324, success?);
     builder new_voting_data = begin_cell()
@@ -375,6 +375,40 @@
     throw_unless(323, success_storing?);
     save_data(_1, _2, current_set_hash, sets, candidates, externalVotings, _7);
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
+}
+
+() remove_outdated_votings (slice s_addr, int query_id, cell external_ids, cell internal_ids) impure {
+    (int _1, int _2, int current_set_hash, cell _4, cell _5, cell external_votings, cell ton_votings) = load_data();
+    int id = -1;
+    do {
+      (id, slice unused, int found?) = external_ids.udict_get_next?(256, id);
+      if(found?) {
+        (cell external_votings', slice voting, int voting_found?) = external_votings.udict_delete_get?(256, id);
+        if(voting_found?) {
+          int set_hash = voting~load_uint(256);
+          if (set_hash != current_set_hash) {
+            ;; remove only old votings
+            external_votings = external_votings';
+          }
+        }
+      }
+    } until (~ found?)
+
+    int id = -1;
+    do {
+      (id, slice unused, int found?) = internal_ids.udict_get_next?(256, id);
+      if(found?) {
+        (cell ton_votings', slice voting, int voting_found?) = ton_votings.udict_delete_get?(256, id);
+        if(voting_found?) {
+          (int executed?, slice unused, int set_hash) = (voting~load_int(1), voting~load_bits(33), voting~load_uint(256));
+          if ((set_hash != current_set_hash) & executed?) {
+            ;; remove only old and executed votings
+            ton_votings = ton_votings';
+          }
+        }
+      }
+    } until (~ found?)
+  return send_receipt_message(s_addr, 0x10000 + 6, query_id, 0, 0, 64);
 }
 
 () process_comment_api_request (slice in_msg, int msg_value, slice s_addr) impure {
@@ -432,5 +466,12 @@
     int voting_id = in_msg~load_uint(256);
     slice signature = in_msg~load_bits(520);
     return vote_on_external_chain(s_addr, query_id, voting_id, signature);
+  }
+  if (op == 6) {
+    ;; remove old swaps
+    (cell external_voting_ids,
+     cell ton_voting_ids) = (in_msg~load_dict(),
+                             in_msg~load_dict());
+    return remove_outdated_votings(s_addr, query_id, external_voting_ids, ton_voting_ids);
   }
 }
