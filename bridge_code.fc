@@ -163,31 +163,119 @@
     }
 }
 
-(cell, (int)) ~execute_voting (cell sets, int current_set_hash, slice voting_data) impure {
-  int unlocked_amount = 0;
+((cell, cell), (int)) ~execute_voting ((cell, cell) data, int current_set_hash, slice voting_data) impure {
+  (cell sets, cell candidates) = data;
+  int unlocked = 0;
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
     (int ext_chain_hash,
      int wc,
      int addr_hash,
-     int amount) = (voting_data~load_uint(256),
+     int swap_amount) = (voting_data~load_uint(256),
                     voting_data~load_int(8),
                     voting_data~load_uint(256),
                     voting_data~load_uint(64));
-    (int reward, int network_fee) = swap_to_ton_fee(amount);
-    amount = amount - reward - network_fee;
+    (int reward, int network_fee) = swap_to_ton_fee(swap_amount);
+    unlocked = swap_amount;
+    swap_amount = swap_amount - reward - network_fee;
     sets~reward_set(current_set_hash, reward);
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     var msg = begin_cell()
       .store_uint(0x10, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 0 0 0 00
       .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
-      .store_grams(amount)
+      .store_grams(swap_amount)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-      .store_uint(ext_chain_hash, 256); ;;// TODO send ext_chain_hash as text
+      .store_uint(ext_chain_hash, 256);
     send_raw_message(msg.end_cell(), 0);
-    unlocked_amount = amount;
   }
-  return (sets, (unlocked_amount));
+  if(operation == 1) { ;; punish oracle
+    (int set_hash,
+     int complaint_body_hash,
+     cell complaint) = (voting_data~load_uint(256),
+                        voting_data~load_uint(256),
+                        voting_data~load_ref());
+    if(cell_hash(complaint) == complaint_body_hash) {
+      ;; unless do nothing: incorrect complaint
+      slice complaint_body = complaint.begin_parse();
+      (int oracle_id, int fine_amount) = (complaint_body~load_uint(256), complaint_body~load_uint(64));
+      
+      (slice old_set_data, int found?) = sets~udict_delete_get?(256, set_hash);
+      if(found?) {
+        ;; unless do nothing: set already released
+        (int locked, 
+         int unrewarded_stake, 
+         int reward,
+         int auth_num,
+         cell keys,
+         cell stakes) = (old_set_data~load_uint(1),
+                         old_set_data~load_grams(),
+                         old_set_data~load_grams(),
+                         old_set_data~load_uint(16),
+                         old_set_data~load_dict(),
+                         old_set_data~load_dict());
+        (slice oracle_slice, int oracle_found?) = stakes~udict_delete_get?(256, oracle_id);
+        int oracle_balance = oracle_slice~load_grams();
+        int actual_fine = min(oracle_balance, fine_amount);
+        ;; TODO what to do with fine?
+        oracle_balance = oracle_balance - actual_fine;
+        unrewarded_stake = unrewarded_stake - actual_fine;
+        if(oracle_balance > 0) {
+          stakes~udict_set_builder(256, oracle_id, begin_cell().store_grams(oracle_balance));
+        }
+        builder oracle_set_data = begin_cell()
+                                  .store_uint(locked,1)
+                                  .store_grams(unrewarded_stake)
+                                  .store_grams(reward)
+                                  .store_uint(auth_num, 16)
+                                  .store_dict(keys)
+                                  .store_dict(stakes);
+        (sets, int success?) = sets.udict_add_builder?(256, set_hash, oracle_set_data);
+        throw_unless(338, success?);
+      }
+    }
+  }
+  if(operation == 2) { ;; release set
+    int set_hash = voting_data~load_uint(256);
+    throw_if(339, set_hash == current_set_hash);
+    (slice set_data, int found?) = sets~udict_delete_get?(256, set_hash);
+    if(found?) {
+      ;; unless do nothing: set already released
+      (int locked, 
+       int unrewarded_stake, 
+       int reward,
+       int auth_num,
+       cell keys,
+       cell stakes) = (set_data~load_uint(1),
+                       set_data~load_grams(),
+                       set_data~load_grams(),
+                       set_data~load_uint(16),
+                       set_data~load_dict(),
+                       set_data~load_dict());
+      int oracle_id = -1;
+      do {
+        (oracle_id, slice stake_s, int oracle_found?) = stakes.udict_get_next?(256, oracle_id);
+        if (found?) {
+          int unrewarded_oracle_stake = stake_s~load_grams();
+          ;; it is impossible to get uin256 overflow here, since reward and stake in grams
+          int stake_n_reward = unrewarded_oracle_stake + unrewarded_oracle_stake * reward / unrewarded_stake ;
+          int balance = 0;
+          int key1 = 0; int key2 = 0;
+          (slice candidate, int candidate_found?) = candidates~udict_delete_get?(256, oracle_id);
+          if(candidate_found?) {
+           (balance, key1, key2) = (candidate~load_grams(),
+                                       candidate~load_uint(256),
+                                       candidate~load_uint(256));
+          }
+          balance = balance + stake_n_reward;
+          candidates~udict_set_builder(256, oracle_id, begin_cell()
+                                                        .store_grams(balance)
+                                                        .store_uint(key1, 256)
+                                                        .store_uint(key2, 256));
+        }
+      } until (~ oracle_found?);
+    }
+  }
+  return ((sets, candidates), (unlocked));
 }
 
 (int, slice) check_oracle_authorization(slice s_addr, oracle_keys) {
@@ -246,9 +334,10 @@
     authorization_num = authorization_num + 1;
     executed? = authorization_num >= min_auth_num;
     if(executed?) {
-      total_locked = total_locked - sets~execute_voting(current_set_hash, voting_entity);
+      total_locked = total_locked - (sets, candidates)~execute_voting(current_set_hash, voting_entity);
       execution_time = now();
     }
+    throw_unless(337, slice_depth(voting_entity) < 3);
     cell new_voting_data = begin_cell()
                                .store_int(executed?, 1)
                                .store_int(execution_time, 33)
