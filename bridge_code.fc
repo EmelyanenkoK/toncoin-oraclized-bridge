@@ -294,7 +294,7 @@
   return ((state_flags, sets, candidates), (unlocked));
 }
 
-(int, slice) check_oracle_authorization(slice s_addr, oracle_keys) {
+(int, slice) check_oracle_authorization(slice s_addr, oracle_keys) impure {
     (int src_wc, int oracle_id) = parse_std_addr(s_addr);
     throw_if(301, src_wc + 1); ;; not from masterchain, return error
     (slice keys, int oracle_found?) = oracle_keys.udict_get?(256, oracle_id);
@@ -424,7 +424,9 @@
 }
 
 () remove_outdated_votings (slice s_addr, int query_id, cell external_ids, cell internal_ids) impure {
-    (int _0, int _1, int _2, int current_set_hash, cell _4, cell _5, cell external_votings, cell ton_votings) = load_data();
+    (int _0, int _1, int _2, int current_set_hash, cell sets, cell candidates, cell external_votings, cell ton_votings) = load_data();
+    (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
+    check_oracle_authorization(s_addr, oracle_keys);
     int id = -1;
     do {
       (id, slice unused, int found?) = external_ids.udict_get_next?(256, id);
@@ -454,7 +456,7 @@
         }
       }
     } until (~ found?);
-  save_data(_0, _1, _2, current_set_hash, _4, _5, external_votings, ton_votings);
+  save_data(_0, _1, _2, current_set_hash, sets, candidates, external_votings, ton_votings);
   return send_receipt_message(s_addr, 0x10000 + 6, query_id, 0, 0, 64);
 }
 
