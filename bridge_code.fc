@@ -85,7 +85,7 @@
     int fee = 1000000000;
     throw_if(302, msg_value < fee);
     int amount = msg_value - fee;
-    (slice candidate, int found?) = candidates~udict_delete_get?(256, src_addr_hash);
+    (slice candidate, int found?) = candidates.udict_get?(256, src_addr_hash);
     int credit = 0;
     if (found?) {
       credit = candidate~load_grams();
@@ -126,7 +126,7 @@
 }
 
 (cell, ()) ~reward_set (cell sets, int current_set_hash, amount) impure {
-    (slice old_set_data, int found?) = sets~udict_delete_get?(256, current_set_hash);
+    (slice old_set_data, int found?) = sets.udict_get?(256, current_set_hash);
     throw_unless(326, found?);
     (int locked, int unrewarded_stake, int reward) = (old_set_data~load_uint(1),
                                                      old_set_data~load_grams(),
@@ -138,8 +138,7 @@
                               .store_grams(reward)
                               .store_slice(old_set_data);
 
-    (sets, int success?) = sets.udict_add_builder?(256, current_set_hash, oracle_set_data);
-    throw_unless(326, success?);
+    sets~udict_set_builder(256, current_set_hash, oracle_set_data);
     return (sets, ());
 }
 
@@ -200,7 +199,7 @@
       slice complaint_body = complaint.begin_parse();
       (int oracle_id, int fine_amount) = (complaint_body~load_uint(256), complaint_body~load_uint(64));
 
-      (slice old_set_data, int found?) = sets~udict_delete_get?(256, set_hash);
+      (slice old_set_data, int found?) = sets.udict_get?(256, set_hash);
       if(found?) {
         ;; unless do nothing: set already released
         (int locked,
@@ -230,8 +229,7 @@
                                   .store_uint(auth_num, 16)
                                   .store_dict(keys)
                                   .store_dict(stakes);
-        (sets, int success?) = sets.udict_add_builder?(256, set_hash, oracle_set_data);
-        throw_unless(338, success?);
+        sets~udict_set_builder(256, set_hash, oracle_set_data);
       }
     }
   }
@@ -261,7 +259,7 @@
           int stake_n_reward = unrewarded_oracle_stake + unrewarded_oracle_stake * reward / unrewarded_stake ;
           int balance = 0;
           int key1 = 0; int key2 = 0;
-          (slice candidate, int candidate_found?) = candidates~udict_delete_get?(256, oracle_id);
+          (slice candidate, int candidate_found?) = candidates.udict_get?(256, oracle_id);
           if(candidate_found?) {
            (balance, key1, key2) = (candidate~load_grams(),
                                        candidate~load_uint(256),
@@ -389,7 +387,7 @@
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
 
-    (slice old_voting_data, int voting_found?) = externalVotings~udict_delete_get?(256, voting_id);
+    (slice old_voting_data, int voting_found?) = externalVotings.udict_get?(256, voting_id);
     cell signatures = new_dict();
     if(voting_found?) {
       (int _set_hash,
@@ -403,8 +401,7 @@
     builder new_voting_data = begin_cell()
                                .store_uint(current_set_hash, 256)
                                .store_dict(signatures);
-    (externalVotings, int success_storing?) = externalVotings.udict_add_builder?(256, voting_id, new_voting_data);
-    throw_unless(323, success_storing?);
+    externalVotings~udict_set_builder(256, voting_id, new_voting_data);
     save_data(_1, _2, current_set_hash, sets, candidates, externalVotings, _7);
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
 }
