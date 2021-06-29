@@ -1,3 +1,4 @@
+
 () recv_external(slice in_msg) impure {
 }
 
@@ -121,7 +122,7 @@
       candidates~udict_set_builder(256, src_addr_hash, new_candidate_data);
     }
     save_data(total_stake, _2, current_set_hash, sets, candidates, _6, _7);
-    return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 2);
+    return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 64 + 2);
 }
 
 (cell, ()) ~reward_set (cell sets, int current_set_hash, amount) impure {
@@ -287,8 +288,9 @@
 }
 
 
-(cell, ()) ~remove_outdated_authorizations (cell authorizations, cell new_oracle_keys) {
+(cell, (int)) ~remove_outdated_authorizations (cell authorizations, cell new_oracle_keys) {
     cell new_auths = new_dict();
+    int new_auth_num = 0;
     int oracle_id = -1;
     do {
       (oracle_id, slice true_slice, int found?) = authorizations.udict_get_next?(256, oracle_id);
@@ -296,10 +298,11 @@
         (slice keys, int oracle_found?) = new_oracle_keys.udict_get?(256, oracle_id);
         if(oracle_found?) {
           new_auths~udict_set(256, oracle_id, true_slice);
+          new_auth_num = new_auth_num + 1;
         }
       }
     } until (~ found?);
-    return (new_auths, ());
+    return (new_auths, (new_auth_num));
 }
 
 () vote_on_ton (slice s_addr, int query_id, slice voting_entity) impure {
@@ -307,43 +310,72 @@
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
 
+    int reject? = voting_entity~load_int(1);
     int voting_id = string_hash(voting_entity);
     (cell _old_voting_data, int voting_found?) = ton_votings~udict_delete_get_ref?(256, voting_id);
-    (int executed?, int execution_time, int set_hash, int authorization_num, cell authorizations) =
-    (0,             -1,                 0,            0,                     new_dict());
+    (int execution_status,
+     int execution_time,
+     int set_hash,
+     int authorization_num,
+     cell authorizations,
+     int rejection_num,
+     cell rejections) =
+                        (0, -1, 0, 0, new_dict(), 0, new_dict());
     if(voting_found?) {
       slice old_voting_data = _old_voting_data.begin_parse();
-      (executed?,
+      (execution_status,
        execution_time,
        set_hash,
        authorization_num,
-       authorizations) =
-                         (old_voting_data~load_int(1),
+       authorizations,
+       rejection_num,
+       rejections) =
+                         (old_voting_data~load_int(2),
                           old_voting_data~load_int(33),
                           old_voting_data~load_uint(256),
+                          old_voting_data~load_uint(16),
+                          old_voting_data~load_dict(),
                           old_voting_data~load_uint(16),
                           old_voting_data~load_dict());
       if(current_set_hash != set_hash) {
         ;; remove signatures signed by oracle not presented in current set
-        authorizations~remove_outdated_authorizations(oracle_keys);
+        authorization_num = authorizations~remove_outdated_authorizations(oracle_keys);
+        rejection_num = rejections~remove_outdated_authorizations(oracle_keys);
       }
     }
-    throw_if(321, executed?);
-    (authorizations, int success?) = authorizations.udict_add_builder?(256, oracle_id, begin_cell().store_uint(1,1));
+    throw_unless(321, execution_status == 0);
+    int success? = 0;
+    if(reject?) {
+      (rejections, success?) = rejections.udict_add_builder?(256, oracle_id, begin_cell());
+    } else {
+      (authorizations, success?) = authorizations.udict_add_builder?(256, oracle_id, begin_cell());
+    }
     throw_unless(322, success?);
-    authorization_num = authorization_num + 1;
-    executed? = authorization_num >= min_auth_num;
-    if(executed?) {
+    if(reject?) {
+      rejection_num = rejection_num + 1;
+      if (rejection_num >= min_auth_num) {
+        execution_status = 1;
+      }
+    } else {
+      authorization_num = authorization_num + 1;
+      execution_status = authorization_num >= min_auth_num;
+    }
+    if(execution_status == -1) {
       total_locked = total_locked - (sets, candidates)~execute_voting(current_set_hash, voting_entity);
+      execution_time = now();
+    }
+    if(execution_status == 1) {
       execution_time = now();
     }
     throw_unless(337, slice_depth(voting_entity) < 3);
     cell new_voting_data = begin_cell()
-                               .store_int(executed?, 1)
+                               .store_int(execution_status, 2)
                                .store_int(execution_time, 33)
                                .store_uint(current_set_hash, 256)
-                               .store_uint(min_auth_num, 16)
+                               .store_uint(authorization_num, 16)
                                .store_dict(authorizations)
+                               .store_uint(rejection_num, 16)
+                               .store_dict(rejections)
                                .store_slice(voting_entity)
                            .end_cell();
     (ton_votings, int success_storing?) = ton_votings.udict_add_ref?(256, voting_id, new_voting_data);
@@ -400,8 +432,8 @@
       if(found?) {
         (cell ton_votings', slice voting, int voting_found?) = ton_votings.udict_delete_get?(256, id);
         if(voting_found?) {
-          (int executed?, slice unused, int set_hash) = (voting~load_int(1), voting~load_bits(33), voting~load_uint(256));
-          if ((set_hash != current_set_hash) & executed?) {
+          (int execution_status, slice unused, int set_hash) = (voting~load_int(2), voting~load_bits(33), voting~load_uint(256));
+          if ((set_hash != current_set_hash) & (execution_status != 0)) {
             ;; remove only old and executed votings
             ton_votings = ton_votings';
           }

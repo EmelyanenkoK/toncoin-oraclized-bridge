@@ -21,8 +21,11 @@
 ;; complaint#01 set_hash:uint256 complaint_body_hash:uint256 complaint:^ComplaintBody = TonVoteEntity;
 ;; release_set#02 set_hash:uint256 = TonVoteEntity;
 ;; ton_vote_envelope#_ 
-;;                     executed:bool execution_time:int33
-;;                     set_hash:uint256 authorization_num:uint16 authorizations:(HashmapE OracleAddress bool)
+;;                     execution_status:int2 # -1: executed, 0 not_executed, 1 rejected
+;;                     execution_time:int33
+;;                     set_hash:uint256
+;;                     authorization_num:uint16 authorizations:(HashmapE OracleAddress bool)
+;;                     rejection_num:uint16 rejections:(HashmapE OracleAddress bool)
 ;;                     vote_entity:TonVoteEntity 
 ;; = TonVoteEnvelop;
 ;;
