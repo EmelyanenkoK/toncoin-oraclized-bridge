@@ -20,6 +20,8 @@
 ;; complaint_body#_ oracle_id:uint256 fine_amount:uint64 reason:^Cell = ComplaintBody;
 ;; complaint#01 set_hash:uint256 complaint_body_hash:uint256 complaint:^ComplaintBody = TonVoteEntity;
 ;; release_set#02 set_hash:uint256 = TonVoteEntity;
+;; update_state_flags#03 state_flags:uint8 = TonVoteEntity;
+;; migrate#04 wc:int8 addr_hash:uint256 = TonVoteEntity;
 ;; ton_vote_envelope#_ 
 ;;                     execution_status:int2 # -1: executed, 0 not_executed, 1 rejected
 ;;                     execution_time:int33
@@ -36,6 +38,7 @@
 ;; candidate#_ credit:Grams oracle:Oracle = Candidate;
 ;; set_hash#_ hash:uint256 = SetHash;
 ;; storage#_
+;;             state_flags:uint8 # +1 - incoming_swaps not allowed, +2 stake operations are not allowed
 ;;             total_staked:Grams
 ;;             total_locked:Grams
 ;;             current_set_hash:SetHash
@@ -53,9 +56,10 @@
 
 
 
-(int, int, int, cell, cell, cell, cell) load_data () inline {
+(int, int, int, int, cell, cell, cell, cell) load_data () inline {
   var ds = get_data().begin_parse();
   return (
+          ds~load_uint(8),
           ds~load_grams(),
           ds~load_grams(),
           ds~load_uint(256),
@@ -67,6 +71,7 @@
 }
 
 () save_data (
+              int state_flags,
               int total_staked,
               int total_locked,
               int current_set_hash,
@@ -74,7 +79,8 @@
               cell candidates,
               cell external_votings,
               cell ton_votings) impure inline {
-  var st = begin_cell().store_grams(total_staked)
+  var st = begin_cell().store_uint(state_flags, 8)
+                       .store_grams(total_staked)
                        .store_grams(total_locked)
                        .store_uint(current_set_hash, 256)
                        .store_dict(sets)

@@ -78,7 +78,8 @@
 }
 
 () deposit_stake(int msg_value, int ed_pubkey, int secp_pubkey, slice s_addr, int query_id) impure {
-    (int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    (int state_flags, int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    throw_if(338, state_flags & 2);
     (sets, candidates, current_set_hash)~check_update();
     (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
     throw_if(301, src_wc + 1); ;; not from masterchain, return error
@@ -99,12 +100,13 @@
                             .store_uint(ed_pubkey, 256)
                             .store_uint(secp_pubkey, 256);
     candidates~udict_set_builder(256, src_addr_hash, new_candidate_data);
-    save_data(total_stake, _2, current_set_hash, sets, candidates, _6, _7);
+    save_data(state_flags, total_stake, _2, current_set_hash, sets, candidates, _6, _7);
     return send_receipt_message(s_addr, 0x10000 + 1, query_id, 0, fee / 10, 2);
 }
 
 () withdraw_stake(int amount, slice s_addr, int query_id) impure {
-    (int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    (int state_flags, int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    throw_if(338, state_flags & 2);
     (sets, candidates, current_set_hash)~check_update();
     (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
     throw_if(301, src_wc + 1); ;; not from masterchain, return error
@@ -121,7 +123,7 @@
                               .store_slice(candidate);
       candidates~udict_set_builder(256, src_addr_hash, new_candidate_data);
     }
-    save_data(total_stake, _2, current_set_hash, sets, candidates, _6, _7);
+    save_data(state_flags, total_stake, _2, current_set_hash, sets, candidates, _6, _7);
     return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 64 + 2);
 }
 
@@ -148,12 +150,13 @@
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount);
     amount = amount - reward - network_fee;
     throw_unless(306, amount > 0);
-    (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    (int state_flags, int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    throw_if(339, state_flags & 1);
     (sets, candidates, current_set_hash)~check_update();
     total_locked = total_locked + amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     sets~reward_set(current_set_hash, reward);
-    save_data(_1, total_locked, current_set_hash, sets, candidates, _6, _7);
+    save_data(state_flags, _1, total_locked, current_set_hash, sets, candidates, _6, _7);
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
@@ -163,8 +166,8 @@
     }
 }
 
-((cell, cell), (int)) ~execute_voting ((cell, cell) data, int current_set_hash, slice voting_data) impure {
-  (cell sets, cell candidates) = data;
+((int, cell, cell), (int)) ~execute_voting ((int, cell, cell) data, int current_set_hash, slice voting_data, int total_locked) impure {
+  (int state_flags, cell sets, cell candidates) = data;
   int unlocked = 0;
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
@@ -274,7 +277,21 @@
       } until (~ oracle_found?);
     }
   }
-  return ((sets, candidates), (unlocked));
+  if(operation == 3) { ;; update state flags
+    state_flags = voting_data~load_uint(8);
+  }
+  if(operation == 4) { ;; update state flags
+    (int wc, int addr_hash) = (voting_data~load_uint(8), voting_data~load_uint(256));
+    var msg = begin_cell()
+      .store_uint(0x18, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 1 0 00
+      .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
+      .store_grams(total_locked)
+      .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+      .store_uint(0xf00d, 32); ;; new bridge contract should recognize this opcode
+    send_raw_message(msg.end_cell(), 1);
+    unlocked = total_locked;
+  }
+  return ((state_flags, sets, candidates), (unlocked));
 }
 
 (int, slice) check_oracle_authorization(slice s_addr, oracle_keys) {
@@ -304,7 +321,7 @@
 }
 
 () vote_on_ton (slice s_addr, int query_id, slice voting_entity) impure {
-    (int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
+    (int state_flags, int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
 
@@ -359,7 +376,7 @@
       execution_status = authorization_num >= min_auth_num;
     }
     if(execution_status == -1) {
-      total_locked = total_locked - (sets, candidates)~execute_voting(current_set_hash, voting_entity);
+      total_locked = total_locked - (state_flags, sets, candidates)~execute_voting(current_set_hash, voting_entity, total_locked);
       execution_time = now();
     }
     if(execution_status == 1) {
@@ -378,16 +395,16 @@
                            .end_cell();
     (ton_votings, int success_storing?) = ton_votings.udict_add_ref?(256, voting_id, new_voting_data);
     throw_unless(323, success_storing?);
-    save_data(_1, total_locked, current_set_hash, sets, candidates, _6, ton_votings);
+    save_data(state_flags, _1, total_locked, current_set_hash, sets, candidates, _6, ton_votings);
     return send_receipt_message(s_addr, 0x10000 + 4, query_id, voting_id, 0, 64);
 }
 
 () vote_on_external_chain (slice s_addr, int query_id, int voting_id, slice signature) impure {
-    (int _1, int _2, int current_set_hash, cell sets, cell candidates, cell externalVotings, cell _7) = load_data();
+    (int state_flags, int _1, int _2, int current_set_hash, cell sets, cell candidates, cell external_votings, cell _7) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
 
-    (slice old_voting_data, int voting_found?) = externalVotings.udict_get?(256, voting_id);
+    (slice old_voting_data, int voting_found?) = external_votings.udict_get?(256, voting_id);
     cell signatures = new_dict();
     if(voting_found?) {
       (int _set_hash,
@@ -401,13 +418,13 @@
     builder new_voting_data = begin_cell()
                                .store_uint(current_set_hash, 256)
                                .store_dict(signatures);
-    externalVotings~udict_set_builder(256, voting_id, new_voting_data);
-    save_data(_1, _2, current_set_hash, sets, candidates, externalVotings, _7);
+    external_votings~udict_set_builder(256, voting_id, new_voting_data);
+    save_data(state_flags, _1, _2, current_set_hash, sets, candidates, external_votings, _7);
     return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
 }
 
 () remove_outdated_votings (slice s_addr, int query_id, cell external_ids, cell internal_ids) impure {
-    (int _1, int _2, int current_set_hash, cell _4, cell _5, cell external_votings, cell ton_votings) = load_data();
+    (int _0, int _1, int _2, int current_set_hash, cell _4, cell _5, cell external_votings, cell ton_votings) = load_data();
     int id = -1;
     do {
       (id, slice unused, int found?) = external_ids.udict_get_next?(256, id);
@@ -421,7 +438,7 @@
           }
         }
       }
-    } until (~ found?)
+    } until (~ found?);
 
     int id = -1;
     do {
@@ -436,7 +453,8 @@
           }
         }
       }
-    } until (~ found?)
+    } until (~ found?);
+  save_data(_0, _1, _2, current_set_hash, _4, _5, external_votings, ton_votings);
   return send_receipt_message(s_addr, 0x10000 + 6, query_id, 0, 0, 64);
 }
 
