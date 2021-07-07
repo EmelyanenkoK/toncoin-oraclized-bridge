@@ -71,8 +71,8 @@
     ;; contract till validators set correct oracle set
     throw_unless(312, success?);
   } else {
-    slice sets_s = sets.begin_parse();
-    oracle_keys = sets_s~load_ref(); ;; No need to parse and load_dict
+    (slice set_s, int success?) = sets.udict_get?(256, current_set_hash);
+    oracle_keys = set_s~load_ref(); ;; No need to parse and load_dict
   }
   return ((sets, candidates, current_set_hash), (set_updated?, min_auth_num, oracle_keys));
 }
