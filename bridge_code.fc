@@ -81,7 +81,6 @@
 () deposit_stake(int msg_value, int ed_pubkey, int secp_pubkey, slice s_addr, int query_id) impure {
     (int state_flags, int total_stake, int _2, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     throw_if(338, state_flags & 2);
-    (sets, candidates, current_set_hash)~check_update();
     (int src_wc, int src_addr_hash) = parse_std_addr(s_addr);
     throw_if(301, src_wc + 1); ;; not from masterchain, return error
     int fee = 1000000000;
@@ -94,8 +93,8 @@
       ;; To change pubkey withdraw all grams first
       throw_unless( 303, (ed_pubkey == candidate~load_uint(256)) & (secp_pubkey == candidate~load_uint(256)) );
     }
-    credit = credit + amount;
-    total_stake = total_stake + amount;
+    credit += amount;
+    total_stake += amount;
     builder new_candidate_data = begin_cell()
                             .store_grams(credit)
                             .store_uint(ed_pubkey, 256)
