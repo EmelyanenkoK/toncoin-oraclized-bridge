@@ -16,17 +16,19 @@
   }
   int config_set_hash = cell_hash(config_set);
   int set_updated? = current_set_hash != config_set_hash;
-  slice config_set_data = config_set.begin_parse();
-  (int flat_stake,
-   int min_auth_num,
-   int seqno,
-   cell oracles) = (config_set_data~load_grams(),
-                    config_set_data~load_uint(16),
-                    config_set_data~load_uint(32),
-                    config_set_data~load_dict());
   cell oracle_keys = new_dict();
+  int min_auth_num = -1;
   if (set_updated?) {
     current_set_hash = config_set_hash;
+    slice config_set_data = config_set.begin_parse();
+    (int flat_stake,
+     min_auth_num,
+     int seqno,
+     cell oracles) = (config_set_data~load_grams(),
+                      config_set_data~load_uint(16),
+                      config_set_data~load_uint(32),
+                      config_set_data~load_dict());
+    cell oracle_keys = new_dict();
     int unrewarded_stake = 0;
     cell locked_stakes = new_dict();
     int _ind = -1;
@@ -36,27 +38,25 @@
         int oracle_id = oracle_id_~load_uint(256);
         (cell candidates', slice candidate, int found_candidate?) = candidates.udict_delete_get?(256, oracle_id);
         if(found_candidate?) {
-          slice candidate_copy = candidate;
           (int credit, slice pubkeys) = (candidate~load_grams(),
                                          candidate~load_bits(512));
           if(credit >= flat_stake) {
             candidates = candidates';
-            credit = credit - flat_stake;
+            credit -= flat_stake;
             builder new_candidate = begin_cell()
                                     .store_grams(credit)
                                     .store_slice(pubkeys);
             candidates~udict_set_builder(256, oracle_id, new_candidate);
             oracle_keys~udict_set(256, oracle_id, pubkeys);
-            unrewarded_stake = unrewarded_stake + flat_stake;
+            unrewarded_stake += flat_stake;
             locked_stakes~udict_set_builder(256, oracle_id, begin_cell().store_grams(flat_stake));
           }
         }
       }
     } until (~ found?);
     int total_oracles_num = unrewarded_stake / flat_stake;
-    ;; //TODO check number of oracles
-    ;; throw_if( 314, total_oracles_num < 4);
-    ;; min_auth_num = max(min_auth_num, total_oracles_num * 2 / 3);
+    throw_if( 314, total_oracles_num < 3);
+    min_auth_num = max(min_auth_num, total_oracles_num * 2 / 3);
     builder oracle_set_data = begin_cell()
                               .store_uint(1,1)
                               .store_grams(unrewarded_stake)
@@ -71,8 +71,9 @@
     ;; contract till validators set correct oracle set
     throw_unless(312, success?);
   } else {
-    slice sets_s = sets.begin_parse();
-    oracle_keys = sets_s~load_ref(); ;; No need to parse and load_dict
+    (slice set_s, int success?) = sets.udict_get?(256, current_set_hash);
+    (int _1, min_auth_num) = (set_s~load_grams(), set_s~load_uint(16));
+    oracle_keys = set_s~load_ref(); ;; No need to parse and load_dict
   }
   return ((sets, candidates, current_set_hash), (set_updated?, min_auth_num, oracle_keys));
 }
