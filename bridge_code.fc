@@ -115,9 +115,10 @@
     (slice candidate, int found?) = candidates~udict_delete_get?(256, src_addr_hash);
     throw_unless(304, found?);
     int credit = candidate~load_grams();
-    credit = credit - amount;
-    total_stake = total_stake - amount;
-    if(credit > 0) {
+    throw_unless(340, credit >= amount);
+    credit -= amount;
+    total_stake -= amount;
+    if(credit != 0) {
       builder new_candidate_data = begin_cell()
                               .store_grams(credit)
                               .store_slice(candidate);
@@ -133,9 +134,9 @@
     (int locked, int unrewarded_stake, int reward) = (old_set_data~load_uint(1),
                                                      old_set_data~load_grams(),
                                                      old_set_data~load_grams());
-    reward = reward + amount;
+    reward += amount;
     builder oracle_set_data = begin_cell()
-                              .store_uint(1,1)
+                              .store_uint(1,1) ;; rewarded set should always be locked
                               .store_grams(unrewarded_stake)
                               .store_grams(reward)
                               .store_slice(old_set_data);
@@ -148,12 +149,12 @@
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     ;; create swap to external chain to destination address
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount);
-    amount = amount - reward - network_fee;
+    amount -= reward + network_fee;
     throw_unless(306, amount > 0);
     (int state_flags, int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     throw_if(339, state_flags & 1);
     (sets, candidates, current_set_hash)~check_update();
-    total_locked = total_locked + amount;
+    total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     sets~reward_set(current_set_hash, reward);
     save_data(state_flags, _1, total_locked, current_set_hash, sets, candidates, _6, _7);
