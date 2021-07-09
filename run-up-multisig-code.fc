@@ -255,6 +255,19 @@ cell get_public_keys() method_id {
   return public_keys;
 }
 
+tuple get_public_keys_list() method_id {
+  cell public_keys = get_public_keys();
+  tuple list = null();
+  int key_id = -1;
+  do {
+      (key_id, slice key, int found?) = public_keys.udict_get_next?(8, key_id);
+      if (found?) {
+        list = cons( key~load_uint(256), list);
+      }
+    } until (~ found?);
+  return list;
+}
+
 (int, int) check_query_signatures(cell query) method_id {
   slice cs = query.begin_parse();
   slice root_signature = cs~load_bits(512);
