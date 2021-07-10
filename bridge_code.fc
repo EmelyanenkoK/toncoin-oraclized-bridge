@@ -447,14 +447,24 @@
       }
     } until (~ found?);
 
+
+    cell config_set = get_current_oracle_set();
+    slice config_set_data = config_set.begin_parse();
+    (int flat_stake,
+     int min_auth_num,
+     int set_timestamp) = (config_set_data~load_grams(),
+                           config_set_data~load_uint(16),
+                           config_set_data~load_uint(32));
     int id = -1;
     do {
       (id, slice unused, int found?) = internal_ids.udict_get_next?(256, id);
       if(found?) {
         (cell ton_votings', slice voting, int voting_found?) = ton_votings.udict_delete_get?(256, id);
         if(voting_found?) {
-          (int execution_status, slice unused, int set_hash) = (voting~load_int(2), voting~load_bits(33), voting~load_uint(256));
-          if ((set_hash != current_set_hash) & (execution_status != 0)) {
+          (int execution_status, int execution_time, int set_hash) = (voting~load_int(2), voting~load_int(33), voting~load_uint(256));
+          if ( (set_hash != current_set_hash) &
+               (execution_status != 0) &
+               (execution_time + 14 * 24 * 3600 < set_timestamp) ) {
             ;; remove only old and executed votings
             ton_votings = ton_votings';
           }
