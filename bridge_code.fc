@@ -128,7 +128,8 @@
     return send_receipt_message(s_addr, 0x10000 + 2, query_id, 0, amount - fee, 64 + 2);
 }
 
-(cell, ()) ~reward_set (cell sets, int current_set_hash, amount) impure {
+((int, cell), ()) ~reward_set ((int, cell) data, int current_set_hash, amount) impure {
+    (int total_staked, cell sets) = data;
     (slice old_set_data, int found?) = sets.udict_get?(256, current_set_hash);
     throw_unless(326, found?);
     (int locked, int unrewarded_stake, int reward) = (old_set_data~load_uint(1),
@@ -142,7 +143,7 @@
                               .store_slice(old_set_data);
 
     sets~udict_set_builder(256, current_set_hash, oracle_set_data);
-    return (sets, ());
+    return ((total_staked, sets), ());
 }
 
 
@@ -151,13 +152,13 @@
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount);
     amount -= reward + network_fee;
     throw_unless(306, amount > 0);
-    (int state_flags, int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
+    (int state_flags, int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell _7) = load_data();
     throw_if(339, state_flags & 1);
     (sets, candidates, current_set_hash)~check_update();
     total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
-    sets~reward_set(current_set_hash, reward);
-    save_data(state_flags, _1, total_locked, current_set_hash, sets, candidates, _6, _7);
+    (total_staked, sets)~reward_set(current_set_hash, reward);
+    save_data(state_flags, total_staked, total_locked, current_set_hash, sets, candidates, _6, _7);
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
@@ -167,8 +168,8 @@
     }
 }
 
-((int, cell, cell), (int)) ~execute_voting ((int, cell, cell) data, int current_set_hash, slice voting_data, int total_locked) impure {
-  (int state_flags, cell sets, cell candidates) = data;
+((int, int, cell, cell), (int)) ~execute_voting ((int, int, cell, cell) data, int current_set_hash, slice voting_data, int total_locked) impure {
+  (int state_flags, int total_staked, cell sets, cell candidates) = data;
   int unlocked = 0;
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
@@ -176,13 +177,13 @@
      int wc,
      int addr_hash,
      int swap_amount) = (voting_data~load_uint(256),
-                    voting_data~load_int(8),
-                    voting_data~load_uint(256),
-                    voting_data~load_uint(64));
+                         voting_data~load_int(8),
+                         voting_data~load_uint(256),
+                         voting_data~load_uint(64));
     (int reward, int network_fee) = swap_to_ton_fee(swap_amount);
     unlocked = swap_amount;
-    swap_amount = swap_amount - reward - network_fee;
-    sets~reward_set(current_set_hash, reward);
+    swap_amount -= reward + network_fee;
+    (total_staked, sets)~reward_set(current_set_hash, reward);
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     var msg = begin_cell()
       .store_uint(0x10, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 0 0 0 00
@@ -221,8 +222,8 @@
         int oracle_balance = oracle_slice~load_grams();
         int actual_fine = min(oracle_balance, fine_amount);
         ;; TODO what to do with fine?
-        oracle_balance = oracle_balance - actual_fine;
-        unrewarded_stake = unrewarded_stake - actual_fine;
+        oracle_balance -= actual_fine;
+        unrewarded_stake -= actual_fine;
         if(oracle_balance > 0) {
           stakes~udict_set_builder(256, oracle_id, begin_cell().store_grams(oracle_balance));
         }
@@ -269,7 +270,7 @@
                                        candidate~load_uint(256),
                                        candidate~load_uint(256));
           }
-          balance = balance + stake_n_reward;
+          balance += stake_n_reward;
           candidates~udict_set_builder(256, oracle_id, begin_cell()
                                                         .store_grams(balance)
                                                         .store_uint(key1, 256)
@@ -292,7 +293,7 @@
     send_raw_message(msg.end_cell(), 1);
     unlocked = total_locked;
   }
-  return ((state_flags, sets, candidates), (unlocked));
+  return ((state_flags, total_staked, sets, candidates), (unlocked));
 }
 
 (int, slice) check_oracle_authorization(slice s_addr, oracle_keys) impure {
@@ -314,7 +315,7 @@
         (slice keys, int oracle_found?) = new_oracle_keys.udict_get?(256, oracle_id);
         if(oracle_found?) {
           new_auths~udict_set(256, oracle_id, true_slice);
-          new_auth_num = new_auth_num + 1;
+          new_auth_num += 1;
         }
       }
     } until (~ found?);
@@ -322,7 +323,7 @@
 }
 
 () vote_on_ton (slice s_addr, int query_id, slice voting_entity) impure {
-    (int state_flags, int _1, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
+    (int state_flags, int total_staked, int total_locked, int current_set_hash, cell sets, cell candidates, cell _6, cell ton_votings) = load_data();
     (int set_updated?, int min_auth_num, cell oracle_keys) = (sets, candidates, current_set_hash)~check_update();
     (int oracle_id, slice keys) = check_oracle_authorization(s_addr, oracle_keys);
 
@@ -368,20 +369,20 @@
     }
     throw_unless(322, success?);
     if(reject?) {
-      rejection_num = rejection_num + 1;
+      rejection_num += 1;
       if (rejection_num >= min_auth_num) {
         execution_status = 1;
       }
     } else {
-      authorization_num = authorization_num + 1;
+      authorization_num += 1;
       execution_status = authorization_num >= min_auth_num;
     }
-    if(execution_status == -1) {
-      total_locked = total_locked - (state_flags, sets, candidates)~execute_voting(current_set_hash, voting_entity, total_locked);
+    if(execution_status != 0) { ;; approve or reject
       execution_time = now();
     }
-    if(execution_status == 1) {
-      execution_time = now();
+    if(execution_status == -1) { ;; approve
+      int unlocked = (state_flags, total_staked, sets, candidates)~execute_voting(current_set_hash, voting_entity, total_locked);
+      total_locked -= unlocked;
     }
     throw_unless(337, slice_depth(voting_entity) < 3);
     cell new_voting_data = begin_cell()
@@ -396,7 +397,7 @@
                            .end_cell();
     (ton_votings, int success_storing?) = ton_votings.udict_add_ref?(256, voting_id, new_voting_data);
     throw_unless(323, success_storing?);
-    save_data(state_flags, _1, total_locked, current_set_hash, sets, candidates, _6, ton_votings);
+    save_data(state_flags, total_staked, total_locked, current_set_hash, sets, candidates, _6, ton_votings);
     return send_receipt_message(s_addr, 0x10000 + 4, query_id, voting_id, 0, 64);
 }
 
