@@ -174,9 +174,11 @@
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
     (int ext_chain_hash,
+     int internal_index,
      int wc,
      int addr_hash,
      int swap_amount) = (voting_data~load_uint(256),
+                         voting_data~load_int(16),
                          voting_data~load_int(8),
                          voting_data~load_uint(256),
                          voting_data~load_uint(64));
@@ -190,7 +192,8 @@
       .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
       .store_grams(swap_amount)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-      .store_uint(ext_chain_hash, 256);
+      .store_uint(ext_chain_hash, 256)
+      .store_uint(internal_index, 16);
     send_raw_message(msg.end_cell(), 0);
   }
   if(operation == 1) { ;; punish oracle

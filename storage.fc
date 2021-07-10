@@ -16,7 +16,7 @@
 ;; external_vote_envelope#_ set_hash:uint256 signatures:(HashmapE SecpPubkey SecpSignature) = ExtVoteEnvelop
 ;;
 ;;
-;; swap_to_ton#00 ext_chain_tx_hash:uint256 wc:int8 addr_hash:uint256 amount:uint64 = TonVoteEntity;
+;; swap_to_ton#00 ext_chain_tx_hash:uint256 swap_index_in_tx:uint16 wc:int8 addr_hash:uint256 amount:uint64 = TonVoteEntity;
 ;; complaint_body#_ oracle_id:uint256 fine_amount:uint64 reason:^Cell = ComplaintBody;
 ;; complaint#01 set_hash:uint256 complaint_body_hash:uint256 complaint:^ComplaintBody = TonVoteEntity;
 ;; release_set#02 set_hash:uint256 = TonVoteEntity;
