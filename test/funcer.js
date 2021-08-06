@@ -225,19 +225,13 @@ ${makeInMessages(data.in_msgs)}
 }
 
 const funcer = (data) => {
-    const func = data.func;
-    const fift = data.fift;
     const path = data.path;
 
-    const compileFuncCmd = func + ' -SP ' + ' -o ' + path + 'compiled.fif ' + data.fc.map(fc => path + fc).join(' ');
-    const runFiftCmd = fift + ' ' + path + 'test.fif';
+    const compileFuncCmd = 'func -SP ' + ' -o ' + path + 'compiled.fif ' + data.fc.map(fc => path + fc).join(' ');
+    const runFiftCmd = 'fift ' + path + 'test.fif';
     const testFif = makeTestFif(data);
 
     console.log(compileFuncCmd);
-    console.log(testFif);
-    console.log(runFiftCmd);
-
-
     exec(compileFuncCmd, (err, stdout, stderr) => {
         if (err) {
             console.error(err);
@@ -249,12 +243,16 @@ const funcer = (data) => {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
+        console.log(testFif);
+
         fs.writeFile(path + 'test.fif', testFif, err => {
             if (err) {
                 console.error(err)
                 return
             }
             console.log('test.fif OK')
+
+            console.log(runFiftCmd);
 
             exec(runFiftCmd, (err, stdout, stderr) => {
                 if (err) {
@@ -269,8 +267,6 @@ const funcer = (data) => {
             });
         })
     });
-
-
 }
 
 module.exports = {funcer};

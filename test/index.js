@@ -1,11 +1,7 @@
 const {funcer} = require("./funcer");
 
-// export FIFTPATH=/Users/tolyayanot/dev/newton/ton/crypto/fift/lib:/Users/tolyayanot/dev/newton/ton/crypto/
-
 funcer({
-    'fift': '/Users/tolyayanot/dev/newton/liteclient-build/crypto/fift',
-    'func': '/Users/tolyayanot/dev/newton/liteclient-build/crypto/func',
-    'path': '/Users/tolyayanot/dev/newton/func_bridge/',
+    'path': './func/',
     'fc': [
         'stdlib.fc',
         'nonstdlib.fc',
