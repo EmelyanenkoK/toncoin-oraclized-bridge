@@ -510,8 +510,8 @@
       cell _cont = in_msg~load_ref();
       in_msg = _cont.begin_parse();
     }
-    (int ed_publey, int secp_pubkey) = (in_msg~load_uint(256), in_msg~load_uint(256));
-    return deposit_stake(msg_value, ed_publey, secp_pubkey, s_addr, query_id);
+    (int ed_pubkey, int secp_pubkey) = (in_msg~load_uint(256), in_msg~load_uint(256));
+    return deposit_stake(msg_value, ed_pubkey, secp_pubkey, s_addr, query_id);
   }
   if (op == 2) {
     ;; withdraw stake
