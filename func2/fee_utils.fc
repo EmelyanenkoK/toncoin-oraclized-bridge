@@ -1,0 +1,11 @@
+(int, int) swap_to_ext_chain_fee (int msg_value, fees)  {
+    (int flat_reward, int network_fee, int factor) = fees;
+    int percent_fee = max(msg_value - flat_reward - network_fee, 0) * factor / (1 << 14);
+    if(msg_value - flat_reward - percent_fee - network_fee < 0) {
+      return (max(0, msg_value - network_fee), min(msg_value, network_fee));
+    }
+    return (flat_reward + percent_fee, network_fee);
+}
+(int, int) swap_to_ton_fee (int total_value, fees) {
+    return swap_to_ext_chain_fee(total_value, fees);
+}
