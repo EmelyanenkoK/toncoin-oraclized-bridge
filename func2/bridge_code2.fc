@@ -39,10 +39,10 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     (int state_flags, int total_locked, cell external_votings, var fees) = load_data();
+    throw_if(339, state_flags & 1);
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees);
     amount -= reward + network_fee;
     throw_unless(306, amount > 0);
-    throw_if(339, state_flags & 1);
     total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     save_data(state_flags, total_locked, external_votings, fees);
@@ -61,68 +61,6 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
     int destination_address = in_msg~load_text_hex_number(20);
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
-}
-
-() vote_on_external_chain(slice s_addr, int query_id, int voting_id, slice signature) impure {
-    (int state_flags, int total_locked, cell external_votings, var fees) = load_data();
-    (_, int oracles_address, cell oracles) = get_bridge_config();
-    (int wc, int addr) = parse_std_addr(s_addr);
-    throw_if(301, wc + 1);
-    (slice key, int found?) = oracles.udict_get?(256, addr);
-    throw_unless(304, found?);
-
-    (slice old_voting_data, int voting_found?) = external_votings.udict_get?(256, voting_id);
-    cell signatures = new_dict();
-    if (voting_found?) {
-      (_, int old_oracles_address, signatures) = (old_voting_data~load_uint(32),
-                                                  old_voting_data~load_uint(256),
-                                                  old_voting_data~load_dict());
-      if (old_oracles_address != oracles_address) {
-        signatures = new_dict();
-      }
-    }
-    int secp_key = key~load_uint(256);
-    int success? = signatures~udict_add?(256, secp_key, signature);
-    throw_unless(324, success?);
-    builder new_voting_data = begin_cell()
-                               .store_uint(now(), 32)
-                               .store_uint(oracles_address, 256)
-                               .store_dict(signatures);
-    external_votings~udict_set_builder(256, voting_id, new_voting_data);
-
-    save_data(state_flags, total_locked, external_votings, fees);
-    return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
-}
-
-() remove_outdated_votings(slice s_addr, int query_id, slice external_ids) impure {
-    (int state_flags, int total_locked, cell external_votings, var fees) = load_data();
-    (_, int oracles_address, cell oracles) = get_bridge_config();
-    (int wc, int addr) = parse_std_addr(s_addr);
-    throw_if(301, wc + 1);
-    int f = (oracles_address == addr);
-    if (~ f) {
-      (_, int found?) = oracles.udict_get?(256, addr);
-      throw_unless(304, found?);
-    }
-
-    int bound = now() - 60 * 60 * 24;
-    while (~ external_ids.slice_empty?()) {
-      if (external_ids.slice_data_empty?()) {
-          external_ids = external_ids.preload_ref().begin_parse();
-      }
-      int voting_id = external_ids~load_uint(256);
-      (cell external_votings', slice voting, int voting_found?) = external_votings.udict_delete_get?(256, id);
-      if (voting_found?) {
-        int last_update = voting~load_uint(32);
-        if (f | (bound > last_update)) {
-          ;; remove only old votings unless it's the will of majority of oracles
-          external_votings = external_votings';
-        }
-      }
-    }
-
-    save_data(state_flags, total_locked, external_votings, fees);
-    return send_receipt_message(s_addr, 0x10000 + 6, query_id, 0, 0, 64);
 }
 
 () execute_voting (slice s_addr, slice voting_data) impure {
@@ -204,21 +142,11 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     return create_swap_from_ton(destination_address, msg_value, s_addr, query_id, false);
   }
 
-  if (op == 5) { ;; submit signatures
-    int voting_id = in_msg~load_uint(256);
-    slice signature = in_msg~load_bits(520);
-    return vote_on_external_chain(s_addr, query_id, voting_id, signature, oracles);
-  }
-
   if (op == 4) {
     (_, int oracels_address, _) = get_bridge_config();
     (int wc, int addr) = parse_std_addr(s_addr);
     throw_if(301, wc + 1);
     throw_unless(305, addr == oracels_address);
     return execute_voting(s_addr, in_msg);
-  }
-
-  if (op == 6) {  ;; remove old swaps
-    return remove_outdated_votings(s_addr, query_id, in_msg);
   }
 }
