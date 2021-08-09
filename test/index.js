@@ -4,60 +4,55 @@ funcer({
     'path': './func/',
     'fc': [
         'stdlib.fc',
-        'nonstdlib.fc',
         'text_utils.fc',
         'message_utils.fc',
-        'fee_utils.fc',
-        'storage.fc',
+        'bridge-config.fc',
         'bridge_code.fc',
-        'get_methods.fc',
     ],
     "configParams": {
         71: [
             'cell', [
-                "coins", "1000000000", // flat_stake
-                "uint16", 1, // min_auth_num
-                "uint32", 0, //seqno
-                "uint16->any", { // oracles
-                    "0": [
-                        "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8"
-                    ]
+                "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // bridge_address
+                "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // oracles_address
+                "uint256->any", { // oracles
+                    "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8": []
                 }
             ]
         ]
     },
     'data': [
-        "coins", 0, // total_staked
+        "uint8", 0, // state_flags
         "coins", 0, // total_locked
-        "uint256", 0, // current_set_hash
-        "uint256->any", {}, // sets
-        "uint256->any", {}, // candidates
-        "uint256->any", {}, // external_votings
-        "uint256->any", {}, // ton_votings
+        "uint3", 4, // collector_address, prefix
+        "int8", 0, // collector_address, wc
+        "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // collector_address
+        "coins", 2*1e9, // flat_reward
+        "coins", 3*1e9, // network_fee
+        "uint14", 19, // factor
     ],
     'in_msgs': [
         {
             "sender": "-1:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
             "amount": "10000000000",
             "body": [
-                "uint32", 1, // op  deposit stake
+                "uint32", 3, // swap
                 "uint64", 123, // query_id
-                "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // ed_publey
-                "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8" // secp_pubkey
+                "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
             ],
             "new_data": [
-                "coins", 0, // total_staked
-                "coins", 0, // total_locked
-                "uint256", 0, // current_set_hash
-                "uint256->any", {}, // sets
-                "uint256->any", {}, // candidates
-                "uint256->any", {}, // external_votings
-                "uint256->any", {}, // ton_votings
+                "uint8", 0, // state_flags
+                "coins", 10000000000, // total_locked
+                "uint3", 4, // collector_address, prefix
+                "int8", 0, // collector_address, wc
+                "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // collector_address
+                "coins", 2*1e9, // flat_reward
+                "coins", 3*1e9, // network_fee
+                "uint14", 10, // factor
             ],
             "out_msgs": [
                 {
-                    "to": "-1:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
-                    "amount": "10000000000",
+                    "to": "0",
+                    "amount": "1000000000",
                     "sendMode": 64,
                     "body": [
                         "uint32", 1, // op  deposit stake

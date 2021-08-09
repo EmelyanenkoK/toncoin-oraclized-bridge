@@ -25,7 +25,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 int calculate_fee(int msg_value, fees)  {
     (int flat_reward, int network_fee, int factor) = fees;
     int remain = msg_value - flat_reward - network_fee;
-    throw_unless(400, remain > 0)
+    throw_unless(400, remain > 0);
     int percent_fee = remain * factor / (1 << 14);
     return flat_reward + network_fee + percent_fee;
 }
@@ -86,11 +86,11 @@ int calculate_fee(int msg_value, fees)  {
       .store_uint(internal_index, 16);
     send_raw_message(msg.end_cell(), 0);
 
-  } else if (operation == 3) { ;; update state flags
+  } elseif (operation == 3) { ;; update state flags
 
     state_flags = voting_data~load_uint(8);
 
-  } else if (operation == 4) { ;; migrate
+  } elseif (operation == 4) { ;; migrate
 
     var msg = begin_cell()
       .store_uint(0x18, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 1 0 00
@@ -101,7 +101,7 @@ int calculate_fee(int msg_value, fees)  {
     send_raw_message(msg.end_cell(), 1);
 ;;    total_locked = 0; ;; todo: а вдруг с первого раза не получится, так хоть второй раз попробуем
 
-  } else if (operation == 5) { ;; get reward
+  } elseif (operation == 5) { ;; get reward
 
     ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees ;; todo: подумать про 1024
     raw_reserve(total_locked + (1 << 40), 2);
@@ -110,13 +110,13 @@ int calculate_fee(int msg_value, fees)  {
       .store_slice(s_addr)
       .store_grams(0)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
-    send_raw_message(msg, 128); ;; send all the remainings
+    send_raw_message(msg.end_cell(), 128); ;; send all the remainings
 
-  } else if (operation == 6) { ;; change fees
+  } elseif (operation == 6) { ;; change fees
 
     fees = voting_data~load_fees();
 
-  } else if (operation == 7) { ;; change collector
+  } elseif (operation == 7) { ;; change collector
 
     collector_address = voting_data~load_msg_addr();
 
