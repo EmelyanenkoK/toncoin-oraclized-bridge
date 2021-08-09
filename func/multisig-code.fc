@@ -9,7 +9,7 @@
     return (0, 0);
   }
   slice ds = bridge_config.begin_parse();
-  if (ds.slice_bits() < 512) {
+  if (ds.slice_bits() != 512) {
     return (0, 0);
   }
   ;; wc always equals to -1
@@ -95,7 +95,6 @@ _ unpack_owner_info(slice cs) inline_ref {
   ;; first query without signatures is always accepted
   (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries) = unpack_state();
   throw_if(37, last_cleaned);
-  throw_unless(38, now() > 1666666666); ;; your time here
   accept_message();
   set_data(pack_state(pending_queries, owner_infos, 1, k, n, wallet_id));
 }
@@ -145,6 +144,8 @@ _ unpack_owner_info(slice cs) inline_ref {
   if (slice_empty?(in_msg)) {
     return try_init();
   }
+
+  throw_unless(38, now() > 1666666666); ;; your time here
 
   ;; Check root signature
   slice root_signature = in_msg~load_bits(512);
