@@ -33,10 +33,10 @@ int calculate_fee(int msg_value, fees)  {
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
+    throw_if(339, state_flags & 1);
     int fee = calculate_fee(amount, fees);
     amount -= fee;
     throw_unless(306, amount > 0);
-    throw_if(339, state_flags & 1);
     total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     save_data(state_flags, total_locked, collector_address, fees);
@@ -103,7 +103,7 @@ int calculate_fee(int msg_value, fees)  {
 
   } else if (operation == 5) { ;; get reward
 
-    ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees
+    ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees ;; todo: подумать про 1024
     raw_reserve(total_locked + (1 << 40), 2);
     var msg = begin_cell()
       .store_uint(0x18, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 1 0 00
