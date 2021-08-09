@@ -22,11 +22,19 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   set_data(st);
 }
 
+int calculate_fee(int msg_value, fees)  {
+    (int flat_reward, int network_fee, int factor) = fees;
+    int remain = msg_value - flat_reward - network_fee;
+    throw_unless(400, remain > 0)
+    int percent_fee = remain * factor / (1 << 14);
+    return flat_reward + network_fee + percent_fee;
+}
+
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
-    (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees); ;; todo: упростить
-    amount -= reward + network_fee;
+    int fee = calculate_fee(amount, fees);
+    amount -= fee;
     throw_unless(306, amount > 0);
     throw_if(339, state_flags & 1);
     total_locked += amount;
@@ -64,9 +72,9 @@ builder store_fees(builder b, (int, int, int) fees) inline {
                          voting_data~load_int(8),
                          voting_data~load_uint(256),
                          voting_data~load_uint(64));
-    (int reward, int network_fee) = swap_to_ton_fee(swap_amount, fees); ;; todo: упростить
+    int fee = calculate_fee(swap_amount, fees);
     total_locked -= swap_amount;
-    swap_amount -= reward + network_fee;
+    swap_amount -= fee;
 
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     var msg = begin_cell()
