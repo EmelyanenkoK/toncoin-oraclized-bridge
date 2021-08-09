@@ -1,0 +1,11 @@
+"Asm.fif" include 
+"TonUtil.fif" include 
+
+<{ SETCP0 ACCEPT
+   "votes-collector-v2.fif" include PUSHREF SETCODE
+}>c
+<b dictnew dict, 
+   dictnew dict, 
+   0 32 u,
+b>
+null <b b{0011} s, 3 roll ref, rot ref, swap dict, b> // StateInit

@@ -1,25 +1,11 @@
-(int, int, cell) get_bridge_config() impure inline_ref {
-  cell bridge_config = config_param(71);
-  if (bridge_config.cell_null?()) {
-    bridge_config = config_param(-71)
-  }
-  throw_if(666, bridge_config.cell_null?());
-  slice ds = bridge_config.begin_parse();
-  ;; wc always equals to -1
-  int bridge_address = ds~load_uint(256);
-  int oracles_address = ds~load_uint(256);
-  cell oracles = ds~load_dict();
-  return (bridge_address, oracles_address, oracles);
-}
-
 (slice, (int, int, int)) load_fees(slice s) inline {
     var res = (s~load_grams(), s~load_grams(), s~load_uint(14));
     return (s, res);
 }
 
-(int, int, cell, (int, int, int)) load_data() inline_ref {
+(int, int, slice, (int, int, int)) load_data() inline_ref {
   var ds = get_data().begin_parse();
-  return (ds~load_uint(8), ds~load_grams(), ds~load_dict(), ds~load_fees());
+  return (ds~load_uint(8), ds~load_grams(), ds~load_msg_addr(), ds~load_fees());
 }
 
 builder store_fees(builder b, (int, int, int) fees) inline {
@@ -27,10 +13,10 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   return b.store_grams(x).store_grams(y).store_uint(z, 14);
 }
 
-() save_data(int state_flags, int total_locked, cell external_votings, fees) impure inline_ref {
+() save_data(int state_flags, int total_locked, slice external_votings_address, fees) impure inline_ref {
   var st = begin_cell().store_uint(state_flags, 8)
                        .store_grams(total_locked)
-                       .store_dict(external_votings)
+                       .store_slice(external_votings_address)
                        .store_fees(fees)
                        .end_cell();
   set_data(st);
@@ -38,14 +24,14 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
-    (int state_flags, int total_locked, cell external_votings, var fees) = load_data();
-    throw_if(339, state_flags & 1);
+    (int state_flags, int total_locked, slice external_votings_address, var fees) = load_data();
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees);
     amount -= reward + network_fee;
     throw_unless(306, amount > 0);
+    throw_if(339, state_flags & 1);
     total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
-    save_data(state_flags, total_locked, external_votings, fees);
+    save_data(state_flags, total_locked, external_votings_address, fees);
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
@@ -64,7 +50,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 }
 
 () execute_voting (slice s_addr, slice voting_data) impure {
-  (int state_flags, int total_locked, cell external_votings, var fees) = load_data();
+  (int state_flags, int total_locked, slice external_votings_address, var fees) = load_data();
 
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
@@ -104,7 +90,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
       .store_uint(0xf00d, 32); ;; new bridge contract should recognize this opcode
     send_raw_message(msg.end_cell(), 1);
-
+    total_locked = 0;
   } else if (operation == 5) { ;; get reward
     ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees
     raw_reserve(total_locked + (1 << 40), 2);
@@ -116,8 +102,10 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     send_raw_message(msg, 128); ;; send all the remainings
   } else if (operation == 6) { ;; change fees
     fees = voting_data~load_fees();
+  } else if (operation == 7) { ;; change collector
+    external_votings_address = voting_data~load_msg_addr();
   }
-  save_data(state_flags, total_locked, external_votings, fees);
+  save_data(state_flags, total_locked, external_votings_address, fees);
 }
 
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
@@ -128,11 +116,17 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     return ();
   }
   slice s_addr = cs~load_msg_addr();
-  if (in_msg.slice_empty?()) {
-    ;; inbound message has empty body
-    throw(299);
-  }
+  throw_if(299, in_msg.slice_empty?()); ;; inbound message has empty body
+  
   int op = in_msg~load_uint(32);
+  (_, int oracels_address, _) = get_bridge_config();
+  (int wc, int addr) = parse_std_addr(s_addr);
+  if (op == 4) {
+    throw_if(301, wc + 1);
+    throw_unless(305, addr == oracels_address);
+    return execute_voting(s_addr, in_msg);
+  }
+  throw_if(306, (wc == -1) & (oracels_address == addr)); ;; don't allow to create swaps from oracles multisig
   if (op == 0) {
     return process_comment_api_request(in_msg, msg_value, s_addr);
   }
@@ -141,12 +135,13 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     int destination_address = in_msg~load_uint(160);
     return create_swap_from_ton(destination_address, msg_value, s_addr, query_id, false);
   }
+}
 
-  if (op == 4) {
-    (_, int oracels_address, _) = get_bridge_config();
-    (int wc, int addr) = parse_std_addr(s_addr);
-    throw_if(301, wc + 1);
-    throw_unless(305, addr == oracels_address);
-    return execute_voting(s_addr, in_msg);
-  }
+;; get methods
+
+_ get_bridge_data() method_id {
+    (int state_flags, int total_locked, slice addr_slice, var fees) = load_data();
+    (int flat_reward, int network_fee, int factor) = fees;
+    (int wc, int addr) = parse_std_addr(addr_slice);
+    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 1 << 14);
 }

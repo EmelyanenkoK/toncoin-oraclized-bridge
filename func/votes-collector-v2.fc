@@ -1,0 +1,91 @@
+;; voting#_ voting_hash:uint256 signatures:(Hashmap 256 bits512) = Voting;
+;; storage#_ hash_to_id:(Hashmap 256 uint64) external_votings:(Hashmap 64 Voting) seqno:uint32 = Storage;
+(cell, cell, int) load_data() inline_ref {
+  var ds = get_data().begin_parse();
+  return (ds~load_dict(), ds~load_dict(), ds~load_uint(32));
+}
+
+() save_data(cell hash_to_id, cell external_votings, int seqno) impure inline_ref {
+  var st = begin_cell().store_dict(hast_to_id).store_dict(external_votings).store_uint(seqno, 32).end_cell();
+  set_data(st);
+}
+
+() vote_on_external_chain(slice s_addr, int query_id, int voting_hash, slice signature) impure {
+    (cell hash_to_id, cell external_votings, int seqno) = load_data();
+    (_, _, cell oracles) = get_bridge_config();
+    (int wc, int addr) = parse_std_addr(s_addr);
+    throw_if(301, wc + 1);
+    (slice key, int found?) = oracles.udict_get?(256, addr);
+    throw_unless(304, found?);
+
+    (slice old_voting_id_slice, int voting_found?) = hash_to_id.udict_get?(256, voting_hash);
+    cell signatures = new_dict();
+    if (voting_found?) {
+      int old_voting_id = old_voting_id_slice~load_uint(64);
+      (slice old_voting_data, _) = external_votings~udict_delete_get?(64, old_voting_id);
+      (_, signatures) = (old_voting_data~load_uint(256),
+                         old_voting_data~load_dict());
+    } 
+    int secp_key = key~load_uint(256);
+    int success? = signatures~udict_add?(256, secp_key, signature);
+    throw_unless(324, success?);
+    builder new_voting_data = begin_cell()
+                               .store_uint(voting_hash, 256)
+                               .store_dict(signatures);
+    int voting_id = (now() << 32) | seqno;
+    hash_to_id~udict_set_builder(256, voting_hash, begin_cell().store_uint(voting_id, 64));
+    external_votings~udict_set_builder(64, voting_id, new_voting_data);
+
+    seqno = (seqno + 1) & 0xffffffff;
+    save_data(hash_to_id, external_votings, seqno);
+    return send_receipt_message(s_addr, 0x10000 + 5, query_id, voting_id, 0, 64);
+}
+
+() remove_outdated_votings(slice s_addr, int query_id) impure {
+    (cell hash_to_id, cell external_votings, int seqno) = load_data();
+
+    int bound = (now() - 60 * 60 * 24 * 7) << 32;
+    do {
+      var (external_votings', id, voting, f) = external_votings.udict_delete_get_min(64);
+      if (f) {
+        f = (id < bound);
+      }
+      if (f) {
+        int voting_hash = voting~load_uint(256);
+        external_votings = external_votings';
+        hash_to_id~udict_delete?(256, voting_hash);
+      }
+    } until (~ f);
+
+    save_data(hash_to_id, external_votings, seqno);
+    return send_receipt_message(s_addr, 0x10000 + 6, query_id, 0, 0, 64); ;; thanks 
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  if (flags & 1) {
+    ;; ignore all bounced messages
+    return ();
+  }
+  slice s_addr = cs~load_msg_addr();
+  if (in_msg.slice_empty?()) {
+    ;; inbound message has empty body
+    return;
+  }
+  int op = in_msg~load_uint(32);
+  if (op == 0) {
+    return;
+  }
+  int query_id = in_msg~load_uint(64);
+ 
+  if (op == 5) { ;; submit signatures
+    int voting_hash = in_msg~load_uint(256);
+    slice signature = in_msg~load_bits(520);
+    return vote_on_external_chain(s_addr, query_id, voting_id, signature);
+  }
+
+  if (op == 6) {  ;; remove old swaps
+    return remove_outdated_votings(s_addr, query_id);
+  }
+}

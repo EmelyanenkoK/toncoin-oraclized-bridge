@@ -1,5 +1,23 @@
 ;; Simple wallet smart contract
 
+(int, int) get_bridge_config() impure inline_ref {
+  cell bridge_config = config_param(71);
+  if (bridge_config.cell_null?()) {
+    bridge_config = config_param(-71)
+  }
+  if (bridge_config.cell_null?()) {
+    return (0, 0);
+  }
+  slice ds = bridge_config.begin_parse();
+  if (ds.slice_bits() < 512) {
+    return (0, 0);
+  }
+  ;; wc always equals to -1
+  int bridge_address = ds~load_uint(256);
+  int oracles_address = ds~load_uint(256);
+  return (bridge_address, oracles_address);
+}
+
 _ unpack_state() inline_ref {
   var ds = begin_parse(get_data());
   var res = (ds~load_uint(32), ds~load_uint(8), ds~load_uint(8), ds~load_uint(64), ds~load_dict(), ds~load_dict());
@@ -77,6 +95,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   ;; first query without signatures is always accepted
   (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries) = unpack_state();
   throw_if(37, last_cleaned);
+  throw_unless(38, now() > 1666666666); ;; your time here
   accept_message();
   set_data(pack_state(pending_queries, owner_infos, 1, k, n, wallet_id));
 }
@@ -84,9 +103,18 @@ _ unpack_owner_info(slice cs) inline_ref {
 (cell, cell) update_pending_queries(cell pending_queries, cell owner_infos, slice msg, int query_id, int creator_i, int cnt, int cnt_bits, int n, int k) impure inline_ref {
   if (cnt >= k) {
     accept_message();
+    (int bridge_address, int oracles_address) = get_bridge_config();
+    (int _, int my_addr) = parse_std_addr(my_address());
     while (msg.slice_refs()) {
       var mode = msg~load_uint(8);
-      send_raw_message(msg~load_ref(), mode);
+      var msg' = msg~load_ref();
+      var msg_slice = msg'.begin_parse();
+      msg_slice~load_uint(4); ;; flags
+      msg_slice~load_msg_addr(); ;; src 
+      (int wc, int addr) = parse_std_addr(msg_slice~load_msg_addr()); ;; dest
+      if ((wc == -1) & (addr == bridge_address)) | (oracles_address != my_addr)) {
+         send_raw_message(msg', mode);
+      }
     }
     pending_queries~udict_set_builder(64, query_id, begin_cell().store_int(0, 1));
     owner_infos~dec_flood(creator_i);
