@@ -13,10 +13,10 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   return (ds~load_uint(8), ds~load_grams(), ds~load_msg_addr(), ds~load_fees());
 }
 
-() save_data(int state_flags, int total_locked, slice external_votings_address, fees) impure inline_ref {
+() save_data(int state_flags, int total_locked, slice collector_address, fees) impure inline_ref {
   var st = begin_cell().store_uint(state_flags, 8)
                        .store_grams(total_locked)
-                       .store_slice(external_votings_address)
+                       .store_slice(collector_address)
                        .store_fees(fees)
                        .end_cell();
   set_data(st);
@@ -24,14 +24,14 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
-    (int state_flags, int total_locked, slice external_votings_address, var fees) = load_data();
+    (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
     (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees);
     amount -= reward + network_fee;
     throw_unless(306, amount > 0);
     throw_if(339, state_flags & 1);
     total_locked += amount;
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
-    save_data(state_flags, total_locked, external_votings_address, fees);
+    save_data(state_flags, total_locked, collector_address, fees);
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
@@ -50,7 +50,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 }
 
 () execute_voting (slice s_addr, slice voting_data) impure {
-  (int state_flags, int total_locked, slice external_votings_address, var fees) = load_data();
+  (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
 
   int operation = voting_data~load_uint(8);
   if(operation == 0) { ;; swap
@@ -103,9 +103,9 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   } else if (operation == 6) { ;; change fees
     fees = voting_data~load_fees();
   } else if (operation == 7) { ;; change collector
-    external_votings_address = voting_data~load_msg_addr();
+    collector_address = voting_data~load_msg_addr();
   }
-  save_data(state_flags, total_locked, external_votings_address, fees);
+  save_data(state_flags, total_locked, collector_address, fees);
 }
 
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
@@ -140,8 +140,8 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 ;; get methods
 
 _ get_bridge_data() method_id {
-    (int state_flags, int total_locked, slice addr_slice, var fees) = load_data();
+    (int state_flags, int total_locked, slice collector_address_slice, var fees) = load_data();
     (int flat_reward, int network_fee, int factor) = fees;
-    (int wc, int addr) = parse_std_addr(addr_slice);
+    (int wc, int addr) = parse_std_addr(collector_address_slice);
     return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 1 << 14);
 }
