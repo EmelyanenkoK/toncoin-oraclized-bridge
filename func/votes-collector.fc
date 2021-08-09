@@ -90,3 +90,25 @@ cell load_data() inline_ref {
     return remove_outdated_votings(s_addr, query_id, in_msg);
   }
 }
+
+(tuple) get_external_voting_data(int voting_id) method_id {
+    cell external_votings = load_data();
+    (slice voting_data, int found?) = external_votings.udict_get?(256, voting_id);
+    throw_unless(309, found?);
+    (int time, int old_oracles_address, signatures) = (voting_data~load_uint(32),
+                                                       voting_data~load_uint(256),
+                                                       voting_data~load_dict());
+    tuple list = null();
+
+    int secp_key = -1;
+    do {
+      (secp_key, slice sig, int found?) = signatures.udict_get_next?(256, secp_key);
+      if (found?) {
+        (int r, int s, int v) = (sig~load_uint(256),
+                                 sig~load_uint(256),
+                                 sig~load_uint(8));
+        list = cons( pair( secp_key, triple(r,s,v)), list);
+      }
+    } until (~ found?);
+    return (list);
+}
