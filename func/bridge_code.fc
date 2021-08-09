@@ -53,7 +53,7 @@ int calculate_fee(int msg_value, fees)  {
     throw_unless(327, in_msg.slice_bits() != 56 + 16 + 20 * 2 * 8);
     int command = in_msg~load_uint(56);
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
-    int destination_address = in_msg~load_text_hex_number(20); ;; todo: упростить
+    int destination_address = in_msg~load_text_hex_number(20);
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }
 
