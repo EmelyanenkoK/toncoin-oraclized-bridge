@@ -49,11 +49,12 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }
 
-() execute_voting (slice s_addr, slice voting_data) impure {
+() execute_voting (slice s_addr, slice voting_data, int bridge_address) impure {
   (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
 
   int operation = voting_data~load_uint(8);
-  if(operation == 0) { ;; swap
+  if (operation == 0) { ;; swap
+
     (int ext_chain_hash,
      int internal_index,
      int wc,
@@ -63,7 +64,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
                          voting_data~load_int(8),
                          voting_data~load_uint(256),
                          voting_data~load_uint(64));
-    (int reward, int network_fee) = swap_to_ton_fee(swap_amount, fees);
+    (int reward, int network_fee) = swap_to_ton_fee(swap_amount, fees); ;; todo: упростить
     total_locked -= swap_amount;
     swap_amount -= reward + network_fee;
 
@@ -76,22 +77,24 @@ builder store_fees(builder b, (int, int, int) fees) inline {
       .store_uint(ext_chain_hash, 256)
       .store_uint(internal_index, 16);
     send_raw_message(msg.end_cell(), 0);
-  } else if(operation == 3) { ;; update state flags
+
+  } else if (operation == 3) { ;; update state flags
 
     state_flags = voting_data~load_uint(8);
 
-  } else if(operation == 4) { ;; migrate
+  } else if (operation == 4) { ;; migrate
 
-    (int wc, int addr_hash) = (voting_data~load_uint(8), voting_data~load_uint(256));
     var msg = begin_cell()
       .store_uint(0x18, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 1 0 00
-      .store_uint(4, 3).store_int(wc, 8).store_uint(addr_hash, 256)
+      .store_uint(4, 3).store_int(-1, 8).store_uint(bridge_address, 256)
       .store_grams(total_locked)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
       .store_uint(0xf00d, 32); ;; new bridge contract should recognize this opcode
     send_raw_message(msg.end_cell(), 1);
-    total_locked = 0;
+;;    total_locked = 0; ;; todo: а вдруг с первого раза не получится, так хоть второй раз попробуем
+
   } else if (operation == 5) { ;; get reward
+
     ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees
     raw_reserve(total_locked + (1 << 40), 2);
     var msg = begin_cell()
@@ -100,11 +103,17 @@ builder store_fees(builder b, (int, int, int) fees) inline {
       .store_grams(0)
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
     send_raw_message(msg, 128); ;; send all the remainings
+
   } else if (operation == 6) { ;; change fees
+
     fees = voting_data~load_fees();
+
   } else if (operation == 7) { ;; change collector
+
     collector_address = voting_data~load_msg_addr();
+
   }
+
   save_data(state_flags, total_locked, collector_address, fees);
 }
 
@@ -119,13 +128,13 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   throw_if(299, in_msg.slice_empty?()); ;; inbound message has empty body
   
   int op = in_msg~load_uint(32);
-  (_, int oracles_address, _) = get_bridge_config(); ;; todo: если config'а еще нет, то упадет, ОК ли это?
+  (int bridge_address, int oracles_address, _) = get_bridge_config(); ;; todo: если config'а еще нет, то упадет, ОК ли это?
   (int wc, int addr) = parse_std_addr(s_addr);
   var is_oracles = (wc == -1) & (oracles_address == addr);
 
   if (op == 4) {
     throw_unless(305, is_oracles);
-    return execute_voting(s_addr, in_msg);
+    return execute_voting(s_addr, in_msg, bridge_address);
   }
   throw_if(306, is_oracles); ;; don't allow to create swaps from oracles multisig
   if (op == 0) {
