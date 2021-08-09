@@ -25,7 +25,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 ;; create swap to external chain to destination address
 () create_swap_from_ton(int destination_address, int amount, slice s_addr, int query_id, int is_text) impure {
     (int state_flags, int total_locked, slice collector_address, var fees) = load_data();
-    (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees);
+    (int reward, int network_fee) = swap_to_ext_chain_fee(amount, fees); ;; todo: упростить
     amount -= reward + network_fee;
     throw_unless(306, amount > 0);
     throw_if(339, state_flags & 1);
@@ -35,7 +35,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
-      return send_text_receipt_message(s_addr, list, 100000000, 2);
+      return send_text_receipt_message(s_addr, list, 100000000, 2); ;; todo: всегда ли 0.1 хватит на комиссию?
     } else {
       return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 2);
     }
@@ -45,7 +45,7 @@ builder store_fees(builder b, (int, int, int) fees) inline {
     throw_unless(327, in_msg.slice_bits() != 56 + 16 + 20 * 2 * 8);
     int command = in_msg~load_uint(56);
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
-    int destination_address = in_msg~load_text_hex_number(20);
+    int destination_address = in_msg~load_text_hex_number(20); ;; todo: упростить
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }
 
@@ -119,14 +119,15 @@ builder store_fees(builder b, (int, int, int) fees) inline {
   throw_if(299, in_msg.slice_empty?()); ;; inbound message has empty body
   
   int op = in_msg~load_uint(32);
-  (_, int oracels_address, _) = get_bridge_config();
+  (_, int oracles_address, _) = get_bridge_config(); ;; todo: если config'а еще нет, то упадет, ОК ли это?
   (int wc, int addr) = parse_std_addr(s_addr);
+  var is_oracles = (wc == -1) & (oracles_address == addr);
+
   if (op == 4) {
-    throw_if(301, wc + 1);
-    throw_unless(305, addr == oracels_address);
+    throw_unless(305, is_oracles);
     return execute_voting(s_addr, in_msg);
   }
-  throw_if(306, (wc == -1) & (oracels_address == addr)); ;; don't allow to create swaps from oracles multisig
+  throw_if(306, is_oracles); ;; don't allow to create swaps from oracles multisig
   if (op == 0) {
     return process_comment_api_request(in_msg, msg_value, s_addr);
   }
