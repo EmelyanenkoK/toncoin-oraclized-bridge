@@ -11,5 +11,5 @@ StateInit hashu 0 swap 2dup 2constant contract_addr
 
 <b b{1000100} s, contract_addr addr, b{000011} s, StateInit ref, b{0} s, b> dup constant extmessage
 2 boc+>B
-"votes-collector-v2-create.boc" tuck B>file
+"votes-collector-create.boc" tuck B>file
 ."(Saved collector creating query to file " type .")" cr
