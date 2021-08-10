@@ -3,7 +3,7 @@
 (int, int) get_bridge_config() impure inline_ref {
   cell bridge_config = config_param(71);
   if (bridge_config.cell_null?()) {
-    bridge_config = config_param(-71)
+    bridge_config = config_param(-71);
   }
   if (bridge_config.cell_null?()) {
     return (0, 0);
@@ -103,7 +103,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   if (cnt >= k) {
     accept_message();
     (int bridge_address, int oracles_address) = get_bridge_config();
-    (int _, int my_addr) = parse_std_addr(my_address());
+    (_, int my_addr) = parse_std_addr(my_address());
     while (msg.slice_refs()) {
       var mode = msg~load_uint(8);
       var msg' = msg~load_ref();
@@ -111,7 +111,7 @@ _ unpack_owner_info(slice cs) inline_ref {
       msg_slice~load_uint(4); ;; flags
       msg_slice~load_msg_addr(); ;; src 
       (int wc, int addr) = parse_std_addr(msg_slice~load_msg_addr()); ;; dest
-      if ((wc == -1) & (addr == bridge_address)) | (oracles_address != my_addr)) {
+      if ( ((wc == -1) & (addr == bridge_address)) | (oracles_address != my_addr) ) {
          send_raw_message(msg', mode);
       }
     }

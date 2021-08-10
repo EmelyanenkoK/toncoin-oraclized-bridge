@@ -10,7 +10,7 @@ cell load_data() inline_ref {
 
 () vote_on_external_chain(slice s_addr, int query_id, int voting_id, slice signature) impure {
     cell external_votings = load_data();
-    (_, _, cell oracles) = get_bridge_config();
+    (_, int oracles_address, cell oracles) = get_bridge_config();
     (int wc, int addr) = parse_std_addr(s_addr);
     throw_if(301, wc + 1);
     (slice key, int found?) = oracles.udict_get?(256, addr);
@@ -48,7 +48,7 @@ cell load_data() inline_ref {
           external_ids = external_ids.preload_ref().begin_parse();
       }
       int voting_id = external_ids~load_uint(256);
-      (cell external_votings', slice voting, int voting_found?) = external_votings.udict_delete_get?(256, id);
+      (cell external_votings', slice voting, int voting_found?) = external_votings.udict_delete_get?(256, voting_id);
       if (voting_found?) {
         int last_update = voting~load_uint(32);
         if (bound > last_update) {
@@ -72,11 +72,11 @@ cell load_data() inline_ref {
   slice s_addr = cs~load_msg_addr();
   if (in_msg.slice_empty?()) {
     ;; inbound message has empty body
-    return;
+    return ();
   }
   int op = in_msg~load_uint(32);
   if (op == 0) {
-    return;
+    return ();
   }
   int query_id = in_msg~load_uint(64);
  
@@ -95,9 +95,9 @@ cell load_data() inline_ref {
     cell external_votings = load_data();
     (slice voting_data, int found?) = external_votings.udict_get?(256, voting_id);
     throw_unless(309, found?);
-    (int time, int old_oracles_address, signatures) = (voting_data~load_uint(32),
-                                                       voting_data~load_uint(256),
-                                                       voting_data~load_dict());
+    (int time, int old_oracles_address, cell signatures) = (voting_data~load_uint(32),
+                                                            voting_data~load_uint(256),
+                                                            voting_data~load_dict());
     tuple list = null();
 
     int secp_key = -1;
