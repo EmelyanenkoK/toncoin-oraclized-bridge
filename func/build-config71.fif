@@ -21,14 +21,14 @@ $# 4 < ' usage if
 $# 2 mod ' usage if
 $# 2 - 2 / constant N
 $1 parse-smc-addr drop
-swap abort"Bridge address should be defined on masterchain"
+swap 1+ abort"Bridge address should be defined on masterchain"
 constant bridge-addr
 $2 parse-smc-addr drop 
-swap abort"Oracles address should be defined on masterchain"
+swap 1+ abort"Oracles address should be defined on masterchain"
 constant oracles-addr
 
 dictnew 3
-{ dup $() parse-smc-addr drop swap abort"Oracle address should be defined on masterchain"
+{ dup $() parse-smc-addr drop swap 1+ abort"Oracle address should be defined on masterchain"
   swap 1+ dup $() parse-int <b swap 256 u, b> <s swap 1+
   3 -roll swap rot 256 udict! swap
 } N times drop constant oracles
