@@ -10,6 +10,10 @@ const makeType = (key) => {
 
         return 'parse-smc-addr drop addr,'
 
+    }  else if (key === 'Address') {
+
+        return 'parse-smc-addr drop Addr,'
+
     } else if (key.startsWith('uint')) {
 
         const bits = key.substr(4);
@@ -28,7 +32,7 @@ const makeType = (key) => {
 }
 
 const makeValue = (key, value) => {
-    if (key === 'address') {
+    if (key === 'address' || key === 'Address') {
         return '"' + value + '"';
     } else {
         return value;
