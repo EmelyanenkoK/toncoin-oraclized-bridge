@@ -1,14 +1,14 @@
-(slice, (int, int, int)) load_fees(slice s) inline {
-    var fees = (s~load_grams(), s~load_grams(), s~load_uint(14));
+(slice, (int, int)) load_fees(slice s) inline {
+    var fees = (s~load_grams(), s~load_uint(16));
     return (s, fees);
 }
 
-builder store_fees(builder b, (int, int, int) fees) inline {
+builder store_fees(builder b, (int, int) fees) inline {
   (int flat_reward, int network_fee, int factor) = fees;
-  return b.store_grams(flat_reward).store_grams(network_fee).store_uint(factor, 14);
+  return b.store_grams(flat_reward).store_grams(network_fee).store_uint(factor, 16);
 }
 
-(int, int, slice, (int, int, int)) load_data() inline_ref {
+(int, int, slice, (int, int)) load_data() inline_ref {
   var ds = get_data().begin_parse();
   return (ds~load_uint(8), ds~load_grams(), ds~load_msg_addr(), ds~load_fees());
 }
@@ -23,11 +23,11 @@ builder store_fees(builder b, (int, int, int) fees) inline {
 }
 
 int calculate_fee(int msg_value, fees)  {
-    (int flat_reward, int network_fee, int factor) = fees;
-    int remain = msg_value - flat_reward - network_fee;
+    (int flat_fee, int factor) = fees;
+    int remain = msg_value - flat_fee;
     throw_unless(400, remain > 0);
-    int percent_fee = remain * factor / (1 << 14);
-    return flat_reward + network_fee + percent_fee;
+    int percent_fee = remain * factor / (1 << 16);
+    return flat_fee + percent_fee;
 }
 
 ;; create swap to external chain to destination address
@@ -159,7 +159,7 @@ int calculate_fee(int msg_value, fees)  {
 
 _ get_bridge_data() method_id {
     (int state_flags, int total_locked, slice collector_address_slice, var fees) = load_data();
-    (int flat_reward, int network_fee, int factor) = fees;
+    (int flat_fee, int factor) = fees;
     (int wc, int addr) = parse_std_addr(collector_address_slice);
-    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 1 << 14);
+    return (state_flags, total_locked, wc, addr, flat_fee, factor, 1 << 16);
 }
