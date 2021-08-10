@@ -5,6 +5,7 @@
 
 builder store_fees(builder b, (int, int, int) fees) inline {
   (int flat_reward, int network_fee, int factor) = fees;
+  throw_if(factor > 10000, 391);
   return b.store_grams(flat_reward).store_grams(network_fee).store_uint(factor, 14);
 }
 
@@ -26,7 +27,7 @@ int calculate_fee(int msg_value, fees)  {
     (int flat_reward, int network_fee, int factor) = fees;
     int remain = msg_value - flat_reward - network_fee;
     throw_unless(400, remain > 0);
-    int percent_fee = remain * factor / (1 << 14);
+    int percent_fee = remain * factor / 10000;
     return flat_reward + network_fee + percent_fee;
 }
 
