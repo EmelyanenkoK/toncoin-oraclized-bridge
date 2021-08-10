@@ -9,9 +9,8 @@
 <b 0 8 u,
    0 Grams,
    0 "build-collector.fif" include hashu Addr,
-   2000000000 Grams,
-   3000000000 Grams,
-   25 14 u,
+   5000000000 Grams,
+   98 16 u,
 b> constant storage
 
 code storage null <b b{0011} s, 3 roll ref, rot ref, swap dict, b> constant StateInit
