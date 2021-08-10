@@ -89,3 +89,26 @@
     return remove_outdated_votings(s_addr, query_id);
   }
 }
+
+(tuple) get_external_voting_data(int voting_hash) method_id {
+    (cell hash_to_id, cell external_votings, _) = load_data();
+    (slice voting_id_slice, int found?) = hash_to_id.udict_get?(256, voting_hash);
+    throw_unless(309, found?);
+    int voting_id = voting_id_slice~load_uint(64);
+    (slice voting_data, _) = external_votings.udict_get?(64, voting_id);
+    (_, signatures) = (voting_data~load_uint(256),
+                       voting_data~load_dict());
+    tuple list = null();
+
+    int secp_key = -1;
+    do {
+      (secp_key, slice sig, int found?) = signatures.udict_get_next?(256, secp_key);
+      if (found?) {
+        (int r, int s, int v) = (sig~load_uint(256),
+                                 sig~load_uint(256),
+                                 sig~load_uint(8));
+        list = cons( pair( secp_key, triple(r,s,v)), list);
+      }
+    } until (~ found?);
+    return (list);
+}
