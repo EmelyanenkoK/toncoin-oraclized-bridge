@@ -119,7 +119,7 @@ b> constant in_msg${i}
 1                    // block_lt
 1                    // trans_lt
 239                  // randseed
-1000000000 null pair // balance_remaining
+${inMsg.contract_balance || '1000000000'} null pair // balance_remaining
 contract_address     // myself
 global_config        // global_config
 10 tuple 1 tuple constant c7
