@@ -3,7 +3,6 @@
 "TonUtil.fif" include 
 
 "build-collector.fif" include constant StateInit
-StateInit .s
 StateInit hashu 0 swap 2dup 2constant contract_addr
 ."new collector address = " 2dup .addr cr
 ."Non-bounceable address (for init): " 2dup 5 .Addr cr
