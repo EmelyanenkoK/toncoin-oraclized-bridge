@@ -361,3 +361,7 @@ cell merge_inner_queries(cell a, cell b) method_id {
     .store_slice(ca)
   .end_cell();
 }
+
+int get_lock_timeout() {
+    return 1666666666; ;; your time also here
+}
