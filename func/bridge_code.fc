@@ -162,5 +162,5 @@ _ get_bridge_data() method_id {
     (int state_flags, int total_locked, slice collector_address_slice, var fees) = load_data();
     (int flat_reward, int network_fee, int factor) = fees;
     (int wc, int addr) = parse_std_addr(collector_address_slice);
-    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 1 << 14);
+    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 10000);
 }
