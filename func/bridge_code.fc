@@ -5,7 +5,7 @@
 
 builder store_fees(builder b, (int, int, int) fees) inline {
   (int flat_reward, int network_fee, int factor) = fees;
-  throw_if(factor > 10000, 391);
+  throw_if(391, factor > 10000);
   return b.store_grams(flat_reward).store_grams(network_fee).store_uint(factor, 14);
 }
 
