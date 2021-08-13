@@ -11,7 +11,7 @@ const makeStorage = (totalLocked) => {
     ];
 }
 
-funcer({'logVmOps': false}, {
+funcer({'logVmOps': false, 'logFiftCode': false}, {
     'path': './func/',
     'fc': [
         'stdlib.fc',

@@ -136,13 +136,13 @@ ${inMsg.out_msgs ? makeCheckOutMessages(inMsg.out_msgs) : 'drop'}
 }
 
 const makeCheckExitCode = () => {
-    return `rot { ."Error: non-zero exit code" cr 1 halt } if`;
+    return `rot { ."Error: non-zero exit code" cr 0 halt } if`;
 }
 
 const makeCheckStorage = (newStorage) => {
     return `
 ${makeParams(newStorage)} constant correct_new_storage
-swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 2 halt } if
+swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 0 halt } if
 `;
 }
 
@@ -151,7 +151,7 @@ const makeCheckOutMessages = (outMessages) => {
 <s dup 0 swap { dup empty? not } {
   ref@ <s swap 1+ swap
 } while drop
-${outMessages.length} <> { ."Error: incorrect number of actions" cr 3 halt } if
+${outMessages.length} <> { ."Error: incorrect number of actions" cr 0 halt } if
 
 ${outMessages.reverse().map(outMsg => makeCheckOutMsg(outMsg)).join('\n')}
 drop
@@ -171,10 +171,10 @@ const makeCheckOutExtMsg = (outMsg) => {
 8 u@+ swap =: send-mode
 ref@+ <s swap ref@ <s parse-msg
 
-\`ext msg.type eq? not { ."Error: external message expected" cr 13 halt } if
-msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 8 halt } if
-${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 9 halt } if
-send-mode ${outMsg.sendMode || 2} <> { ."Error: incorrect message sendmode" cr 11 halt } if
+\`ext msg.type eq? not { ."Error: external message expected" cr 0 halt } if
+msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 0 halt } if
+send-mode ${outMsg.sendMode || 2} <> { ."Error: incorrect message sendmode" cr 0 halt } if
 `
 }
 
@@ -184,11 +184,11 @@ const makeCheckOutIntMsg = (outMsg) => {
 8 u@+ swap =: send-mode
 ref@+ <s swap ref@ <s parse-msg
 
-\`int msg.type eq? not { ."Error: internal message expected" cr 12 halt } if
-msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 8 halt } if
-"${outMsg.to}" parse-smc-addr drop msg.dest 2<> { ."Error: incorrect message destination" cr 9 halt } if
-msg.value ${outMsg.amount} <> { ."Error: incorrect message value" cr 10 halt } if
-send-mode ${outMsg.sendMode || 3} <> { ."Error: incorrect message sendmode" cr 11 halt } if
+\`int msg.type eq? not { ."Error: internal message expected" cr 0 halt } if
+msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+"${outMsg.to}" parse-smc-addr drop msg.dest 2<> { ."Error: incorrect message destination" cr 0 halt } if
+msg.value ${outMsg.amount} <> { ."Error: incorrect message value" cr 0 halt } if
+send-mode ${outMsg.sendMode || 3} <> { ."Error: incorrect message sendmode" cr 0 halt } if
 `
 }
 
@@ -247,11 +247,11 @@ const makeTestFif = (data) => {
 
 // s --
 {
-  1 i@+ swap { ."not an internal message" cr 1 halt } if
+  1 i@+ swap { ."not an internal message" cr 0 halt } if
   1 i@+ swap =: msg.ihr-disabled
   1 i@+ swap =: msg.bounce
   1 i@+ nip
-  2 u@+ swap 0 <> { ."src = none expected" cr 1 halt } if
+  2 u@+ swap 0 <> { ."src = none expected" cr 0 halt } if
   addr@+ -rot 2=: msg.dest
   Gram@+ swap =: msg.value
   1 i@+ swap { ref@+ swap } { null } cond =: msg.extra
@@ -263,8 +263,8 @@ const makeTestFif = (data) => {
 
 // s --
 {
-  2 u@+ swap 3 <> { ."not an outbound external message" cr 1 halt } if
-  2 u@+ swap 0 <> { ."src = none expected" cr 1 halt } if
+  2 u@+ swap 3 <> { ."not an outbound external message" cr 0 halt } if
+  2 u@+ swap 0 <> { ."src = none expected" cr 0 halt } if
   ext-addr@+ swap =: msg.dest
   64 u@+ nip 32 u@+ nip
   1 i@+ swap abort"StateInit is not supported"
@@ -300,6 +300,7 @@ const funcer = (options, data) => {
     const runFiftCmd = 'fift ' + path + 'test.fif';
     const testFif = makeTestFif(data);
     const logVmOps = options.logVmOps;
+    const logFiftCode = options.logFiftCode;
 
     console.log(compileFuncCmd);
     exec(compileFuncCmd, (err, stdout, stderr) => {
@@ -313,7 +314,7 @@ const funcer = (options, data) => {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
-        console.log(testFif);
+        if (logFiftCode) console.log(testFif);
 
         fs.writeFile(path + 'test.fif', testFif, err => {
             if (err) {
@@ -325,6 +326,12 @@ const funcer = (options, data) => {
             console.log(runFiftCmd);
 
             exec(runFiftCmd, (err, stdout, stderr) => {
+                if (err) {
+                    console.error(err);
+                    // node couldn't execute the command
+                    return;
+                }
+
                 // the *entire* stdout and stderr (buffered)
                 console.log(`stdout: ${stdout}`);
                 if (logVmOps) console.log(`stderr: ${stderr}`);
