@@ -66,7 +66,7 @@ const makeMap = (key, value) => {
     let i = 0;
     for (let _key in value) {
         const _value = value[_key];
-        s += makeParams(_value) + ' <s ' + makeMapKey(mapKey, _key) + '\n';
+        s += makeCell(_value) + ' <s ' + makeMapKey(mapKey, _key) + '\n';
         i += 2;
     }
 
@@ -79,13 +79,13 @@ const makeParam = (key, value) => {
     }
 
     if (key === 'cell') {
-        return makeParams(value) + ' ref,';
+        return makeCell(value) + ' ref,';
     }
 
     return makeValue(key, value) + ' ' + makeType(key);
 }
 
-const makeParams = (arr) => {
+const makeCell = (arr) => {
     let s = '<b\n';
     let i = 0;
     while (i < arr.length) {
@@ -105,7 +105,7 @@ parse-smc-addr drop 2constant sender_address${i}
 
 ${inMsg.amount} constant msg_value${i} // in_msg amount
 
-${makeParams(inMsg.body)} constant in_msg_body${i}
+${makeCell(inMsg.body)} constant in_msg_body${i}
 
 <b b{0110} s,
    sender_address${i} Addr,
@@ -126,27 +126,28 @@ global_config        // global_config
 
 msg_value${i} in_msg${i} in_msg_body${i} <s 0 code storage c7 0x75 runvmx
 // returns ...values exit_code new_c4 c5
+swap rot
 
 ${inMsg.exit_code ? makeCheckExitCode(inMsg.exit_code) : makeCheckZeroExitCode()}
 
-${inMsg.new_data ? makeCheckStorage(inMsg.new_data) : 'nip'}
+${inMsg.new_data ? makeCheckStorage(inMsg.new_data) : 'drop'}
 
 ${inMsg.out_msgs ? makeCheckOutMessages(inMsg.out_msgs) : 'drop'}
 `;
 }
 
 const makeCheckZeroExitCode = () => {
-    return `rot { ."Error: non-zero exit code" cr 0 halt } if`;
+    return `dup { ."Error: non-zero exit code (" . .")" cr 0 halt } { drop } cond`;
 }
 
 const makeCheckExitCode = (exitCode) => {
-  return `rot dup ${exitCode} <> { ."Error: exit code ${exitCode} expected, but " . ."found" cr 0 halt } { drop } cond`
+  return `dup ${exitCode} <> { ."Error: exit code ${exitCode} expected, but " . ."found" cr 0 halt } { drop } cond`
 }
 
 const makeCheckStorage = (newStorage) => {
     return `
-${makeParams(newStorage)} constant correct_new_storage
-swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 0 halt } if
+${makeCell(newStorage)} constant correct_new_storage
+hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 0 halt } if
 `;
 }
 
@@ -176,7 +177,7 @@ const makeCheckOutExtMsg = (outMsg) => {
 ref@+ <s swap ref@ <s parse-msg
 
 \`ext msg.type eq? not { ."Error: external message expected" cr 0 halt } if
-msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+msg.body hashu ${makeCell(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
 ${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 0 halt } if
 send-mode ${outMsg.sendMode || 2} <> { ."Error: incorrect message sendmode" cr 0 halt } if
 `
@@ -189,7 +190,7 @@ const makeCheckOutIntMsg = (outMsg) => {
 ref@+ <s swap ref@ <s parse-msg
 
 \`int msg.type eq? not { ."Error: internal message expected" cr 0 halt } if
-msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+msg.body hashu ${makeCell(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
 "${outMsg.to}" parse-smc-addr drop msg.dest 2<> { ."Error: incorrect message destination" cr 0 halt } if
 msg.value ${outMsg.amount} <> { ."Error: incorrect message value" cr 0 halt } if
 send-mode ${outMsg.sendMode || 3} <> { ."Error: incorrect message sendmode" cr 0 halt } if
@@ -218,10 +219,72 @@ const makeConfigParams = (configParams) => {
     return makeMap('int32->any', configParams);
 }
 
+const makeStackValue = (type, value) => {
+  if (type == "int") {
+      return value;
+  } else if (type == "address") {
+      return `"${value}" parse-smc-addr drop`;
+  } else {
+    throw new Error('unsupported stack type "' + type + '"');
+  }
+}
+
+const stackValueSize = (type) => {
+  return {
+    "int" : 1,
+    "address" : 2,
+  }[type];
+}
+
+const makeStackValues = (args) => {
+  return args.map(pair => makeStackValue(pair[0], pair[1])).join(' ');
+}
+
+const makeOutputEntryCheck = (type, value) => {
+  const check = 'not { ."Error: incorrect output value" cr 0 halt } if'
+  if (type == "int") {
+      return makeStackValue(type, value) + ` = ` + check;
+  } else if (type == "address") {
+      return makeStackValue(type, value) + ` 2= ` + check;
+  } else {
+    throw new Error('unsupported stack type "' + type + '"');
+  }
+}
+
+const makeOutputCheck = (output) => {
+  return output.map(pair => makeOutputEntryCheck(pair[0], pair[1])).join('\n');
+}
+
+const calculateOutputLength = (output) => {
+  return output.map(pair => stackValueSize(pair[0])).reduce((a, b) => a + b, 0);
+}
+
+const makeGetMethod = (getMethod) => {
+    return `
+${makeStackValues(getMethod.args)}
+"${getMethod.name}" method_id code storage c7 0x15 runvmx drop
+${makeCheckZeroExitCode()}
+depth ${calculateOutputLength(getMethod.output)} <>
+{ ."Error: incorrect output length of ${getMethod.name}; output: " .s cr 0 halt } if
+${makeOutputCheck(getMethod.output.reverse())}
+`;
+}
+
+const makeGetMethods = (getMethods) => {
+    let s = '';
+    for (let i in getMethods) {
+      s += makeGetMethod(getMethods[i]);
+    }
+    return s;
+}
+
 const makeTestFif = (data) => {
     return `
 "TonUtil.fif" include
 "Asm.fif" include
+
+// $ -- id
+{ $>B crc16 0xffff and 0x10000 or } : method_id
 
 { rot = -rot = and } : 2=
 { 2= not } : 2<>
@@ -284,7 +347,7 @@ const makeTestFif = (data) => {
 
 "compiled.fif" include <s constant code
 
-${makeParams(data.data)} constant storage
+${makeCell(data.data)} constant storage
 
 ${makeConfigParams(data.configParams)} constant global_config
 
@@ -292,6 +355,8 @@ ${makeConfigParams(data.configParams)} constant global_config
 hashu -1 swap addr, b> constant contract_address
 
 ${makeInMessages(data.in_msgs)}
+
+${makeGetMethods(data.get_methods)}
 
 ."All tests passed" cr
 `;

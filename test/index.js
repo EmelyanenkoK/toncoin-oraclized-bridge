@@ -65,5 +65,20 @@ funcer({'logVmOps': false, 'logFiftCode': false}, {
                 }
             ]
         },
+    ],
+    "get_methods": [
+      {
+        "name": "get_bridge_data",
+        "args": [],
+        "output": [
+          ["int", 0], // state_flags
+          ["int", 0], // total_locked
+          ["address", "0:e53bddefb065373732ec25d5f9af0b3f7a3be358ea87ec285b4b6330a67d8c6a"], // collector_address
+          ["int", 2*1e9], // flat_reward
+          ["int", 3*1e9], // network_fee
+          ["int", 0], // factor
+          ["int", 10000] // factor base
+        ]
+      }
     ]
 });
