@@ -293,13 +293,13 @@ ${makeInMessages(data.in_msgs)}
 `;
 }
 
-const funcer = (data) => {
+const funcer = (options, data) => {
     const path = data.path;
 
     const compileFuncCmd = 'func -SP ' + ' -o ' + path + 'compiled.fif ' + data.fc.map(fc => path + fc).join(' ');
     const runFiftCmd = 'fift ' + path + 'test.fif';
     const testFif = makeTestFif(data);
-    const logVmOps = data.logVmOps;
+    const logVmOps = options.logVmOps;
 
     console.log(compileFuncCmd);
     exec(compileFuncCmd, (err, stdout, stderr) => {

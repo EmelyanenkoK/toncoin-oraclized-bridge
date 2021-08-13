@@ -1,6 +1,6 @@
 const {funcer} = require("./funcer");
 
-funcer({
+funcer({}, {
     'path': './func/',
     'fc': [
         'stdlib.fc',

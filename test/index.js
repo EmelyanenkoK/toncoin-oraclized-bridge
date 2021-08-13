@@ -13,7 +13,7 @@ const makeStorage = (totalLocked) => {
     ];
 }
 
-funcer({
+funcer({'logVmOps': false}, {
     'path': './func/',
     'fc': [
         'stdlib.fc',
@@ -22,7 +22,6 @@ funcer({
         'bridge-config.fc',
         'bridge_code.fc',
     ],
-    'logVmOps': false,
     "configParams": {
         71: [
             'cell', [
