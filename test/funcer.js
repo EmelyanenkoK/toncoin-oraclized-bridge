@@ -127,7 +127,7 @@ global_config        // global_config
 msg_value${i} in_msg${i} in_msg_body${i} <s 0 code storage c7 0x75 runvmx
 // returns ...values exit_code new_c4 c5
 
-${makeCheckExitCode()}
+${inMsg.exit_code ? makeCheckExitCode(inMsg.exit_code) : makeCheckZeroExitCode()}
 
 ${inMsg.new_data ? makeCheckStorage(inMsg.new_data) : 'nip'}
 
@@ -135,8 +135,12 @@ ${inMsg.out_msgs ? makeCheckOutMessages(inMsg.out_msgs) : 'drop'}
 `;
 }
 
-const makeCheckExitCode = () => {
+const makeCheckZeroExitCode = () => {
     return `rot { ."Error: non-zero exit code" cr 0 halt } if`;
+}
+
+const makeCheckExitCode = (exitCode) => {
+  return `rot dup ${exitCode} <> { ."Error: exit code ${exitCode} expected, but " . ."found" cr 0 halt } { drop } cond`
 }
 
 const makeCheckStorage = (newStorage) => {
