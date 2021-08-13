@@ -44,30 +44,27 @@ funcer({
                 "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
             ],
             "new_data": makeStorage(5*1e9),
-            // "out_msgs": [
-            //     {
-            //         "to": "0",
-            //         "amount": "1000000000",
-            //         "sendMode": 64,
-            //         "body": [
-            //             "uint32", 1, // op  deposit stake
-            //             "uint64", 123, // query_id
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // ed_publey
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8" // secp_pubkey
-            //         ],
-            //     },
-            //     {
-            //         "to": "-1:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
-            //         "amount": "10000000000",
-            //         "sendMode": 64,
-            //         "body": [
-            //             "uint32", 1, // op  deposit stake
-            //             "uint64", 123, // query_id
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // ed_publey
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8" // secp_pubkey
-            //         ],
-            //     },
-            // ]
+            "out_msgs": [
+                {
+                    "type": "External",
+                    "to": "0x00000000000000000000000000000000000000000000000000000000c0470ccf",
+                    "body": [
+                        "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
+                        "uint64", 5*1e9 // amount - fees
+                    ],
+                },
+                {
+                    "type": "Internal",
+                    "to": "-1:43dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // sender
+                    "amount": 100000000,
+                    "sendMode": 2,
+                    "body": [
+                        "uint32", 0x10000 + 3, // swap response
+                        "uint64", 123, // query_id
+                        "uint256", 0 // body
+                    ],
+                }
+            ]
         },
     ]
 });

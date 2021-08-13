@@ -138,7 +138,7 @@ const makeCheckStorage = (newStorage) => {
 ${makeParams(newStorage)} constant correct_new_storage
 
 rot { ."Error: non-zero exit code" cr 1 halt } if
-swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 2 halt } if   
+swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 2 halt } if
 `;
 }
 
@@ -149,26 +149,52 @@ const makeCheckOutMessages = (outMessages) => {
 } while drop
 ${outMessages.length} <> { ."Error: incorrect number of actions" cr 3 halt } if
 
-{ rot = -rot = and } : 2=
-{ 2= not } : 2<>
-
 ${outMessages.reverse().map(outMsg => makeCheckOutMsg(outMsg)).join('\n')}
     `
 }
 
+const makeExtDest = (dest) => {
+  if (dest.startsWith('0x')) {
+    return 'x{' + dest.substr(2) + '}';
+  }
+  throw new Error('ExtMsg.to: hex string expected instead of "' + dest + '"');
+}
 
-const makeCheckOutMsg = (outMsg) => {
+const makeCheckOutExtMsg = (outMsg) => {
     return `
 4 B@+ swap B{0EC3C86D} B= not abort"Unsupported action"
 8 u@+ swap =: send-mode
 ref@+ <s swap ref@ <s parse-msg
 
+\`ext msg.type eq? not { ."Error: external message expected" cr 13 halt } if
+msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 8 halt } if
+${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 9 halt } if
+`
+}
+
+const makeCheckOutIntMsg = (outMsg) => {
+    return `
+4 B@+ swap B{0EC3C86D} B= not abort"Unsupported action"
+8 u@+ swap =: send-mode
+ref@+ <s swap ref@ <s parse-msg
+
+\`int msg.type eq? not { ."Error: internal message expected" cr 12 halt } if
 msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 8 halt } if
 "${outMsg.to}" parse-smc-addr drop msg.dest 2<> { ."Error: incorrect message destination" cr 9 halt } if
 msg.value ${outMsg.amount} <> { ."Error: incorrect message value" cr 10 halt } if
 send-mode ${outMsg.sendMode || 3} <> { ."Error: incorrect message sendmode" cr 11 halt } if
 `
 }
+
+const makeCheckOutMsg = (outMsg) => {
+    if (outMsg.type == "Internal") {
+        return makeCheckOutIntMsg(outMsg);
+    } else if (outMsg.type == "External") {
+        return makeCheckOutExtMsg(outMsg);
+    } else {
+        throw new Error('unsupported outMsg type "' + outMsg.type + '"');
+    }
+};
 
 const makeInMessages = (inMsgs) => {
     let s = '';
@@ -187,6 +213,9 @@ const makeTestFif = (data) => {
 "TonUtil.fif" include
 "Asm.fif" include
 
+{ rot = -rot = and } : 2=
+{ 2= not } : 2<>
+
 // s -- wc addr s'
 { 1 i@+ swap not abort"Internal address expected"
   1 i@+
@@ -195,6 +224,20 @@ const makeTestFif = (data) => {
   i@+ rot u@+
 } : addr@+
 { addr@+ drop } : addr@
+
+// s len -- res s'
+{ tuck u@+ -rot swap
+  <b -rot u, b> <s swap
+} : s@+ // TODO: support for more than 256 bits or rather add C++ code for it
+{ s@+ drop } : s@
+
+// s -- addr s'
+{ 1 i@+ swap abort"External address expected"
+  1 i@+ swap
+  { 9 u@+ swap s@+ }
+  { x{} swap } cond
+} : ext-addr@+
+{ ext-addr@+ drop } : ext-addr@
 
 // s --
 {
@@ -210,11 +253,25 @@ const makeTestFif = (data) => {
   64 u@+ nip 32 u@+ nip
   1 i@+ swap abort"StateInit is not supported"
   1 i@+ swap { ref@ } { s>c } cond =: msg.body
+} : parse-int-msg
+
+// s --
+{
+  2 u@+ swap 3 <> { ."not an outbound external message" cr 1 halt } if
+  2 u@+ swap 0 <> { ."src = none expected" cr 1 halt } if
+  ext-addr@+ swap =: msg.dest
+  64 u@+ nip 32 u@+ nip
+  1 i@+ swap abort"StateInit is not supported"
+  1 i@+ swap { ref@ } { s>c } cond =: msg.body
+ } : parse-ext-msg
+
+// s --
+{
+  dup 1 i@
+  { \`ext =: msg.type parse-ext-msg }
+  { \`int =: msg.type parse-int-msg } cond
 } : parse-msg
 
-// <{ SETCP0 CONT:<{ c5 PUSH }> ATEXIT
-//      "compiled.fif" include <s @addop
-// }>s constant code
 "compiled.fif" include <s constant code
 
 ${makeParams(data.data)} constant storage
