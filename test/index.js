@@ -22,6 +22,7 @@ funcer({
         'bridge-config.fc',
         'bridge_code.fc',
     ],
+    'logVmOps': false,
     "configParams": {
         71: [
             'cell', [

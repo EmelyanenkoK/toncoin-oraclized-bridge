@@ -127,17 +127,21 @@ global_config        // global_config
 msg_value${i} in_msg${i} in_msg_body${i} <s 0 code storage c7 0x75 runvmx
 // returns ...values exit_code new_c4 c5
 
-${inMsg.new_data ? makeCheckStorage(inMsg.new_data) : ''}
+${makeCheckExitCode()}
 
-${inMsg.out_msgs ? makeCheckOutMessages(inMsg.out_msgs) : ''}
+${inMsg.new_data ? makeCheckStorage(inMsg.new_data) : 'nip'}
+
+${inMsg.out_msgs ? makeCheckOutMessages(inMsg.out_msgs) : 'drop'}
 `;
+}
+
+const makeCheckExitCode = () => {
+    return `rot { ."Error: non-zero exit code" cr 1 halt } if`;
 }
 
 const makeCheckStorage = (newStorage) => {
     return `
 ${makeParams(newStorage)} constant correct_new_storage
-
-rot { ."Error: non-zero exit code" cr 1 halt } if
 swap hashu correct_new_storage hashu <> { ."Error: incorrect resulting storage" cr 2 halt } if
 `;
 }
@@ -150,6 +154,7 @@ const makeCheckOutMessages = (outMessages) => {
 ${outMessages.length} <> { ."Error: incorrect number of actions" cr 3 halt } if
 
 ${outMessages.reverse().map(outMsg => makeCheckOutMsg(outMsg)).join('\n')}
+drop
     `
 }
 
@@ -283,6 +288,8 @@ ${makeConfigParams(data.configParams)} constant global_config
 hashu -1 swap addr, b> constant contract_address
 
 ${makeInMessages(data.in_msgs)}
+
+."All tests passed" cr
 `;
 }
 
@@ -292,6 +299,7 @@ const funcer = (data) => {
     const compileFuncCmd = 'func -SP ' + ' -o ' + path + 'compiled.fif ' + data.fc.map(fc => path + fc).join(' ');
     const runFiftCmd = 'fift ' + path + 'test.fif';
     const testFif = makeTestFif(data);
+    const logVmOps = data.logVmOps;
 
     console.log(compileFuncCmd);
     exec(compileFuncCmd, (err, stdout, stderr) => {
@@ -317,15 +325,9 @@ const funcer = (data) => {
             console.log(runFiftCmd);
 
             exec(runFiftCmd, (err, stdout, stderr) => {
-                if (err) {
-                    console.error(err);
-                    // node couldn't execute the command
-                    return;
-                }
-
                 // the *entire* stdout and stderr (buffered)
                 console.log(`stdout: ${stdout}`);
-                console.log(`stderr: ${stderr}`);
+                if (logVmOps) console.log(`stderr: ${stderr}`);
             });
         })
     });
