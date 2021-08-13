@@ -48,6 +48,7 @@ funcer({
                 {
                     "type": "External",
                     "to": "0x00000000000000000000000000000000000000000000000000000000c0470ccf",
+                    "sendMode": 2,
                     "body": [
                         "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
                         "uint64", 5*1e9 // amount - fees

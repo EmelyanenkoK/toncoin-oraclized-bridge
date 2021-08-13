@@ -169,6 +169,7 @@ ref@+ <s swap ref@ <s parse-msg
 \`ext msg.type eq? not { ."Error: external message expected" cr 13 halt } if
 msg.body hashu ${makeParams(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 8 halt } if
 ${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 9 halt } if
+send-mode ${outMsg.sendMode || 2} <> { ."Error: incorrect message sendmode" cr 11 halt } if
 `
 }
 
