@@ -33,6 +33,7 @@ _ pack_state(cell pending_queries, cell owner_infos, int last_cleaned, int k, in
     .store_uint(last_cleaned, 64)
     .store_dict(owner_infos)
     .store_dict(pending_queries)
+    .store_uint(spend_delay,32)
   .end_cell();
 }
 
