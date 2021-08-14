@@ -42,13 +42,14 @@ dictnew 0 pubkeys {
   8 b>udict! drop rot 1+ rot
 } n times 2drop constant owner_infos
 
-// create_init_state
+{ $>B crc16 0xffff and 0x10000 or } : method_id
+
 wallet-id
 n
 k
 owner_infos
-now  65536 7 * +
-81625 code <s <b b> runvm 2drop constant storage
+spend-delay
+"create_init_state" method_id code <s <b b> runvm 2drop constant storage
 
 code storage null <b b{0011} s, 3 roll ref, rot ref, swap dict, b> constant StateInit
 

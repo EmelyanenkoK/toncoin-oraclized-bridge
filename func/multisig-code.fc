@@ -48,7 +48,7 @@ _ unpack_owner_info(slice cs) inline_ref {
 
 (int, int) check_signatures(cell public_keys, cell signatures, int hash, int cnt_bits) inline_ref {
   int cnt = 0;
-  
+
   do {
     slice cs = signatures.begin_parse();
     slice signature = cs~load_bits(512);
@@ -109,7 +109,7 @@ _ unpack_owner_info(slice cs) inline_ref {
       var msg' = msg~load_ref();
       var msg_slice = msg'.begin_parse();
       msg_slice~load_uint(4); ;; flags
-      msg_slice~load_msg_addr(); ;; src 
+      msg_slice~load_msg_addr(); ;; src
       (int wc, int addr) = parse_std_addr(msg_slice~load_msg_addr()); ;; dest
       if ( ((wc == -1) & (addr == bridge_address)) | (oracles_address != my_addr) ) {
          send_raw_message(msg', mode);
@@ -152,7 +152,7 @@ _ unpack_owner_info(slice cs) inline_ref {
 
   (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries, int spend_delay) = unpack_state();
 
-  throw_unless(38, now() > spend_delay); ;; your time here
+  throw_unless(38, now() > spend_delay);
   last_cleaned -= last_cleaned == 0;
 
   (slice owner_info, var found?) = owner_infos.udict_get?(8, root_i);
@@ -199,7 +199,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
 
   commit();
-  
+
   int need_save = 0;
   ifnot (cell_null?(signatures) | (cnt >= k)) {
     (int new_cnt, cnt_bits) = check_signatures(owner_infos, signatures, hash, cnt_bits);
@@ -270,11 +270,11 @@ cell merge_list(cell a, cell b) {
     cell tail = merge_list(as~load_ref(), b);
     return begin_cell().store_slice(as).store_ref(tail).end_cell();
   }
-  
+
   as~skip_last_bits(1);
   ;; as~skip_bits(1);
   return begin_cell().store_slice(as).store_dict(b).end_cell();
-  
+
 }
 
 cell get_public_keys() method_id {
@@ -304,7 +304,7 @@ cell get_public_keys() method_id {
 }
 
 int message_signed_by_id?(int id, int query_id) {
-  (_, int n, _, _, _, cell pending_queries) = unpack_state();
+  (_, int n, _, _, _, cell pending_queries, _) = unpack_state();
   (var cs, var f) = pending_queries.udict_get?(64, query_id);
   if (f) {
     if (cs~load_int(1)) {
@@ -366,4 +366,3 @@ int get_lock_timeout() {
   (_, _, _, _, _, _, int spend_delay) = unpack_state();
   return spend_delay;
 }
-
