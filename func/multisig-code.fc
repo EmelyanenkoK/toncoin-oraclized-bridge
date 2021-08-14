@@ -20,12 +20,12 @@
 
 _ unpack_state() inline_ref {
   var ds = begin_parse(get_data());
-  var res = (ds~load_uint(32), ds~load_uint(8), ds~load_uint(8), ds~load_uint(64), ds~load_dict(), ds~load_dict());
+  var res = (ds~load_uint(32), ds~load_uint(8), ds~load_uint(8), ds~load_uint(64), ds~load_dict(), ds~load_dict(), ds~load_uint(32));
   ds.end_parse();
   return res;
 }
 
-_ pack_state(cell pending_queries, cell owner_infos, int last_cleaned, int k, int n, int wallet_id) inline_ref {
+_ pack_state(cell pending_queries, cell owner_infos, int last_cleaned, int k, int n, int wallet_id, int spend_delay) inline_ref {
   return begin_cell()
     .store_uint(wallet_id, 32)
     .store_uint(n, 8)
@@ -93,10 +93,10 @@ _ unpack_owner_info(slice cs) inline_ref {
 
 () try_init() impure inline_ref {
   ;; first query without signatures is always accepted
-  (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries) = unpack_state();
+  (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries, int spend_delay) = unpack_state();
   throw_if(37, last_cleaned);
   accept_message();
-  set_data(pack_state(pending_queries, owner_infos, 1, k, n, wallet_id));
+  set_data(pack_state(pending_queries, owner_infos, 1, k, n, wallet_id, spend_delay));
 }
 
 (cell, cell) update_pending_queries(cell pending_queries, cell owner_infos, slice msg, int query_id, int creator_i, int cnt, int cnt_bits, int n, int k) impure inline_ref {
@@ -145,14 +145,14 @@ _ unpack_owner_info(slice cs) inline_ref {
     return try_init();
   }
 
-  throw_unless(38, now() > 1666666666); ;; your time here
-
   ;; Check root signature
   slice root_signature = in_msg~load_bits(512);
   int root_hash = slice_hash(in_msg);
   int root_i = in_msg~load_uint(8);
 
-  (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries) = unpack_state();
+  (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries, int spend_delay) = unpack_state();
+
+  throw_unless(38, now() > spend_delay); ;; your time here
   last_cleaned -= last_cleaned == 0;
 
   (slice owner_info, var found?) = owner_infos.udict_get?(8, root_i);
@@ -196,7 +196,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   }
 
   (pending_queries, owner_infos) = update_pending_queries(pending_queries, owner_infos, msg, query_id, creator_i, cnt, cnt_bits, n, k);
-  set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id));
+  set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
 
   commit();
   
@@ -228,14 +228,14 @@ _ unpack_owner_info(slice cs) inline_ref {
   } until (~ f);
 
   if (need_save) {
-    set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id));
+    set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
   }
 }
 
 ;; Get methods
 ;; returns -1 for processed queries, 0 for unprocessed, 1 for unknown (forgotten)
 (int, int) get_query_state(int query_id) method_id {
-  (_, int n, _, int last_cleaned, _, cell pending_queries) = unpack_state();
+  (_, int n, _, int last_cleaned, _, cell pending_queries, _) = unpack_state();
   (slice cs, var found) = pending_queries.udict_get?(64, query_id);
   if (found) {
     if (cs~load_int(1)) {
@@ -254,8 +254,8 @@ int processed?(int query_id) method_id {
   return x;
 }
 
-cell create_init_state(int wallet_id, int n, int k, cell owners_info) method_id {
-  return pack_state(new_dict(), owners_info, 0, k, n, wallet_id);
+cell create_init_state(int wallet_id, int n, int k, cell owners_info, int spend_delay) method_id {
+  return pack_state(new_dict(), owners_info, 0, k, n, wallet_id, spend_delay);
 }
 
 cell merge_list(cell a, cell b) {
@@ -278,7 +278,7 @@ cell merge_list(cell a, cell b) {
 }
 
 cell get_public_keys() method_id {
-  (_, _, _, _, cell public_keys, _) = unpack_state();
+  (_, _, _, _, cell public_keys, _, _) = unpack_state();
   return public_keys;
 }
 
@@ -320,7 +320,7 @@ int message_signed_by_id?(int id, int query_id) {
 }
 
 cell messages_by_mask(int mask) method_id {
-  (_, int n, _, _, _, cell pending_queries) = unpack_state();
+  (_, int n, _, _, _, cell pending_queries, _) = unpack_state();
   int i = -1;
   cell a = new_dict();
   do {
@@ -346,7 +346,7 @@ cell get_messages_unsigned() method_id {
 }
 
 (int, int) get_n_k() method_id {
-  (_, int n, int k, _, _, _) = unpack_state();
+  (_, int n, int k, _, _, _, _) = unpack_state();
   return (n, k);
 }
 
@@ -363,5 +363,7 @@ cell merge_inner_queries(cell a, cell b) method_id {
 }
 
 int get_lock_timeout() {
-    return 1666666666; ;; your time also here
+  (_, _, _, _, _, _, int spend_delay) = unpack_state();
+  return spend_delay;
 }
+
