@@ -81,6 +81,9 @@ const makeParam = (key, value) => {
     if (key === 'cell') {
         return makeCell(value) + ' ref,';
     }
+    if (key === 'comment') {
+        throw new Error('comment should be the only paramet');
+    }
 
     return makeValue(key, value) + ' ' + makeType(key);
 }
@@ -88,6 +91,9 @@ const makeParam = (key, value) => {
 const makeCell = (arr) => {
     let s = '<b\n';
     let i = 0;
+    if(arr.length == 2 && arr[0] == "comment") {
+      return `<b 0 32 u, "${arr[1]}" 119 append-long-string b>`
+    }
     while (i < arr.length) {
         const key = arr[i];
         const value = arr[i + 1];
@@ -177,12 +183,16 @@ const makeCheckOutExtMsg = (outMsg) => {
 ref@+ <s swap ref@ <s parse-msg
 
 \`ext msg.type eq? not { ."Error: external message expected" cr 0 halt } if
-msg.body hashu ${makeCell(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+msg.body hashu ${makeCell(outMsg.body)} hashu <>
+{ ."Error: incorrect message body" cr
+  ."Expected " ${makeCell(outMsg.body)} <s csr.
+  ."Got      " msg.body <s csr.
+0 halt } if
 ${makeExtDest(outMsg.to)} shash msg.dest shash B= not { ."Error: incorrect message destination" cr 0 halt } if
 send-mode ${("sendMode" in outMsg)? outMsg.sendMode : 2} <> 
 { ."Error: incorrect message sendmode" cr 
   ."Expected ${outMsg.sendMode}" cr
-  ."Got" send-mode .
+  ."Got      " send-mode .
 11 halt } if
 `
 }
@@ -194,7 +204,11 @@ const makeCheckOutIntMsg = (outMsg) => {
 ref@+ <s swap ref@ <s parse-msg
 
 \`int msg.type eq? not { ."Error: internal message expected" cr 0 halt } if
-msg.body hashu ${makeCell(outMsg.body)} hashu <> { ."Error: incorrect message body" cr 0 halt } if
+msg.body hashu ${makeCell(outMsg.body)} hashu <> 
+{ ."Error: incorrect message body" cr 
+  ."Expected " ${makeCell(outMsg.body)} <s csr.
+  ."Got      " msg.body <s csr.
+0 halt } if
 "${outMsg.to}" parse-smc-addr drop msg.dest 2<> { ."Error: incorrect message destination" cr 0 halt } if
 msg.value ${outMsg.amount} <> { ."Error: incorrect message value" cr 0 halt } if
 send-mode ${("sendMode" in outMsg)? outMsg.sendMode : 3} <> 
