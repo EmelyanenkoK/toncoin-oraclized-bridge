@@ -75,6 +75,7 @@ int calculate_fee(int msg_value, fees)  {
                          voting_data~load_uint(64));
     int fee = calculate_fee(swap_amount, fees);
     total_locked -= swap_amount;
+    throw_unless(315, total_locked >= 0);
     swap_amount -= fee;
 
     ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
