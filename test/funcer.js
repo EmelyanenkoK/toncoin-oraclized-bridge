@@ -193,7 +193,7 @@ send-mode ${("sendMode" in outMsg)? outMsg.sendMode : 2} <>
 { ."Error: incorrect message sendmode" cr 
   ."Expected ${outMsg.sendMode}" cr
   ."Got      " send-mode .
-11 halt } if
+0 halt } if
 `
 }
 
@@ -215,7 +215,7 @@ send-mode ${("sendMode" in outMsg)? outMsg.sendMode : 3} <>
 { ."Error: incorrect message sendmode" cr 
   ."Expected ${outMsg.sendMode}" cr
   ."Got " send-mode . cr
-11 halt } if
+0 halt } if
 `
 }
 
