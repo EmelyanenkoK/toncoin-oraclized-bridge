@@ -12,7 +12,7 @@ const makeStorage = (totalLocked) => {
         "uint14", 200, // factor
     ];
 }
-const ethAddress = "0xbba57dF6B628803C445d27e8904BE49C69A95ff3";
+const ethAddress = "0x0123456789abcdefABCDEFe8904BE49C69A95ff3";
 
 funcer({},{
     'path': './func/',
@@ -49,7 +49,7 @@ funcer({},{
                     "to": "0x00000000000000000000000000000000000000000000000000000000c0470ccf",
                     "sendMode": 2,
                     "body": [
-                        "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
+                        "uint160", ethAddress, // destination_address
                         "uint64", 5*1e9*0.98 // amount - fees
                     ],
                 },
