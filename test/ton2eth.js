@@ -9,11 +9,12 @@ const makeStorage = (totalLocked) => {
         "uint256", "0xe53bddefb065373732ec25d5f9af0b3f7a3be358ea87ec285b4b6330a67d8c6a", // collector_address
         "coins", 2*1e9, // flat_reward
         "coins", 3*1e9, // network_fee
-        "uint14", 0, // factor
+        "uint14", 200, // factor
     ];
 }
+const ethAddress = "0xbba57dF6B628803C445d27e8904BE49C69A95ff3";
 
-funcer({
+funcer({},{
     'path': './func/',
     'fc': [
         'stdlib.fc',
@@ -39,35 +40,29 @@ funcer({
             "sender": "-1:43dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
             "amount": 10*1e9,
             "body": [
-                "uint32", 3, // swap
-                "uint64", 123, // query_id
-                "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
+                "comment", `swapTo#${ethAddress}`
             ],
-            "new_data": makeStorage(5*1e9),
-            // "out_msgs": [
-            //     {
-            //         "to": "0",
-            //         "amount": "1000000000",
-            //         "sendMode": 64,
-            //         "body": [
-            //             "uint32", 1, // op  deposit stake
-            //             "uint64", 123, // query_id
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // ed_publey
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8" // secp_pubkey
-            //         ],
-            //     },
-            //     {
-            //         "to": "-1:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
-            //         "amount": "10000000000",
-            //         "sendMode": 64,
-            //         "body": [
-            //             "uint32", 1, // op  deposit stake
-            //             "uint64", 123, // query_id
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // ed_publey
-            //             "uint256", "0x83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8" // secp_pubkey
-            //         ],
-            //     },
-            // ]
+            "new_data": makeStorage(5*1e9*0.98),
+            "out_msgs": [
+                {
+                    "type": "External",
+                    "to": "0x00000000000000000000000000000000000000000000000000000000c0470ccf",
+                    "sendMode": 2,
+                    "body": [
+                        "uint160", "0xbba57dF6B628803C445d27e8904BE49C69A95ff3", // destination_address
+                        "uint64", 5*1e9*0.98 // amount - fees
+                    ],
+                },
+                {
+                    "type": "Internal",
+                    "to": "-1:43dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // sender
+                    "amount": 100000000,
+                    "sendMode": 2,
+                    "body": [
+                      "comment", `OK ${5*1e9*0.98} `
+                    ],
+                }
+            ]
         },
     ]
 });

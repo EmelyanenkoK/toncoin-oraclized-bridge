@@ -12,8 +12,10 @@ const makeStorage = (totalLocked) => {
         "uint14", 0, // factor
     ];
 }
-
-funcer({
+const bridgeAddress = "0x13dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8";
+const multisigAddress = "0x23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8";
+const contractBalance = 10.2374e9;
+funcer({},{
     'path': './func/',
     'fc': [
         'stdlib.fc',
@@ -25,35 +27,46 @@ funcer({
     "configParams": {
         71: [
             'cell', [
-                "uint256", "0x13dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // bridge_address
-                "uint256", "0x23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // oracles_address
+                "uint256", bridgeAddress, // bridge_address
+                "uint256", multisigAddress, // oracles_address
                 "uint256->any", { // oracles
                     "0x33dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8": []
                 }
             ]
         ]
     },
-    'data': makeStorage(10 * 1e9),
+    'data': makeStorage(contractBalance),
     'in_msgs': [
         {
-            "sender": "-1:23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
+            "sender": `-1:${multisigAddress.slice(2)}`,
             "amount": 0.1*1e9,
             "contract_balance": 11*1e9,
             "body": [
                 "uint32", 4, // execute_voting
                 "uint8", 4, // migrate
             ],
-            "new_data":makeStorage(10 * 1e9),
+            "new_data":makeStorage(contractBalance), //total_locked is not updated
             "out_msgs": [
                 {
-                    "to": "-1:13dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
-                    "amount": 10*1e9,
-                    "sendMode": 32,
+                    "type": "Internal",
+                    "to": `-1:${bridgeAddress.slice(2)}`,
+                    "amount": contractBalance,
+                    "sendMode": 1,
                     "body": [
-                        'uint32', 'xf00d'
+                        'uint32', '0xf00d'
                     ],
                 },
             ]
+        },
+        {
+            "sender": `-1:0000000000000000000000000000000000000000000000000000000000000000`,
+            "amount": 0.1*1e9,
+            "contract_balance": 11*1e9,
+            "body": [
+                "uint32", 4, // execute_voting
+                "uint8", 4, // migrate
+            ],
+            "exit_code": 305
         },
     ]
 });

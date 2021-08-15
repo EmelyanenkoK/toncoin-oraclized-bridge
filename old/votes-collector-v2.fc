@@ -6,7 +6,7 @@
 }
 
 () save_data(cell hash_to_id, cell external_votings, int seqno) impure inline_ref {
-  var st = begin_cell().store_dict(hast_to_id).store_dict(external_votings).store_uint(seqno, 32).end_cell();
+  var st = begin_cell().store_dict(hash_to_id).store_dict(external_votings).store_uint(seqno, 32).end_cell();
   set_data(st);
 }
 
@@ -71,18 +71,18 @@
   slice s_addr = cs~load_msg_addr();
   if (in_msg.slice_empty?()) {
     ;; inbound message has empty body
-    return;
+    return ();
   }
   int op = in_msg~load_uint(32);
   if (op == 0) {
-    return;
+    return ();
   }
   int query_id = in_msg~load_uint(64);
  
   if (op == 5) { ;; submit signatures
     int voting_hash = in_msg~load_uint(256);
     slice signature = in_msg~load_bits(520);
-    return vote_on_external_chain(s_addr, query_id, voting_id, signature);
+    return vote_on_external_chain(s_addr, query_id, voting_hash, signature);
   }
 
   if (op == 6) {  ;; remove old swaps
@@ -96,8 +96,8 @@
     throw_unless(309, found?);
     int voting_id = voting_id_slice~load_uint(64);
     (slice voting_data, _) = external_votings.udict_get?(64, voting_id);
-    (_, signatures) = (voting_data~load_uint(256),
-                       voting_data~load_dict());
+    (_, var signatures) = (voting_data~load_uint(256),
+                           voting_data~load_dict());
     tuple list = null();
 
     int secp_key = -1;

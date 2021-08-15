@@ -30,7 +30,7 @@ constant oracles-addr
 dictnew 3
 { dup $() parse-smc-addr drop swap 1+ abort"Oracle address should be defined on masterchain"
   swap 1+ dup $() parse-int <b swap 256 u, b> <s swap 1+
-  3 -roll swap rot 256 udict! swap
+  3 -roll swap rot 256 udict! drop swap
 } N times drop constant oracles
 
 <b bridge-addr 256 u, 

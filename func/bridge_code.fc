@@ -5,6 +5,7 @@
 
 builder store_fees(builder b, (int, int, int) fees) inline {
   (int flat_reward, int network_fee, int factor) = fees;
+  throw_if(391, factor > 10000);
   return b.store_grams(flat_reward).store_grams(network_fee).store_uint(factor, 14);
 }
 
@@ -26,7 +27,7 @@ int calculate_fee(int msg_value, fees)  {
     (int flat_reward, int network_fee, int factor) = fees;
     int remain = msg_value - flat_reward - network_fee;
     throw_unless(400, remain > 0);
-    int percent_fee = remain * factor / (1 << 14);
+    int percent_fee = remain * factor / 10000;
     return flat_reward + network_fee + percent_fee;
 }
 
@@ -50,7 +51,7 @@ int calculate_fee(int msg_value, fees)  {
 }
 
 () process_comment_api_request (slice in_msg, int msg_value, slice s_addr) impure {
-    throw_unless(327, in_msg.slice_bits() != 56 + 16 + 20 * 2 * 8);
+    throw_unless(327, in_msg.slice_bits() == 56 + 16 + 20 * 2 * 8);
     int command = in_msg~load_uint(56);
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
     int destination_address = in_msg~load_text_hex_number(20);
@@ -161,5 +162,5 @@ _ get_bridge_data() method_id {
     (int state_flags, int total_locked, slice collector_address_slice, var fees) = load_data();
     (int flat_reward, int network_fee, int factor) = fees;
     (int wc, int addr) = parse_std_addr(collector_address_slice);
-    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 1 << 14);
+    return (state_flags, total_locked, wc, addr, flat_reward, network_fee, factor, 10000);
 }
