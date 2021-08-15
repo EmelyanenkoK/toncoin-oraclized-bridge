@@ -47,7 +47,7 @@ funcer({},{
                 {
                     "type": "External",
                     "to": "0x00000000000000000000000000000000000000000000000000000000c0470ccf",
-                    "sendMode": 2,
+                    "sendMode": 0,
                     "body": [
                         "uint160", ethAddress, // destination_address
                         "uint64", 6*1e9*0.98 // amount - fees
@@ -57,9 +57,9 @@ funcer({},{
                     "type": "Internal",
                     "to": "-1:43dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // sender
                     "amount": 100000000,
-                    "sendMode": 2,
+                    "sendMode": 3,
                     "body": [
-                      "comment", `OK ${6*1e9*0.98} `
+                      "comment", `OK`
                     ],
                 }
             ]

@@ -1,16 +1,3 @@
-[int, int] encode_number_to_text(int number) {
-  int len = 0;
-  int value = 0;
-  int mult = 1;
-  do {
-    (number, int res) = number.divmod(10);
-    value = value + (res + 48) * mult;
-    mult = mult * 256;
-    len = len + 1;
-  } until (number == 0);
-  return pair(len, value);
-}
-
 (slice, (int)) ~load_hex_symbol(slice comment) {
   int n = comment~load_uint(8);
   n = n - 48;

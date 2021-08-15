@@ -42,9 +42,7 @@ int calculate_fee(int msg_value, fees)  {
     emit_log_simple(0xc0470ccf, begin_cell().store_uint(destination_address, 160).store_uint(amount, 64).end_cell().begin_parse());
     save_data(state_flags, total_locked, collector_address, fees);
     if(is_text) {
-      [int, int] OK = pair(2, 0x4f4b);
-      tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
-      return send_text_receipt_message(s_addr, list, 100000000, 3);
+      return send_text_receipt_message(s_addr, 100000000, 3);
     } else {
       return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 3);
     }
