@@ -13,7 +13,7 @@ const makeStorage = (totalLocked) => {
     ];
 }
 
-funcer({
+funcer({}, {
     'path': './func/',
     'fc': [
         'stdlib.fc',
@@ -46,6 +46,7 @@ funcer({
             "new_data":makeStorage(10 * 1e9),
             "out_msgs": [
                 {
+                    "type": "Internal",
                     "to": "-1:23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
                     "amount": 1*1e9,
                     "sendMode": 128,
