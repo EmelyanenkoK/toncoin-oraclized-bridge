@@ -59,7 +59,7 @@ funcer({},{
                     "amount": 100000000,
                     "sendMode": 3,
                     "body": [
-                      "comment", `OK ${6*1e9*0.98} `
+                      "comment", `OK`
                     ],
                 }
             ]
