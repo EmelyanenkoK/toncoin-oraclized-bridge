@@ -1,0 +1,27 @@
+#!/usr/bin/env fift -s
+"Asm.fif" include 
+"TonUtil.fif" include 
+
+<{ SETCP0 ACCEPT
+   "bridge_code2.fif" include PUSHREF SETCODE
+}>c constant code
+
+<b 0 8 u,
+   0 Gram,
+   0 "build-collector.fif" include hashu Addr,
+   2000000000 Gram,
+   3000000000 Gram,
+   25 14 u,
+b> constant storage
+
+code storage null <b b{0011} s, 3 roll ref, rot ref, swap dict, b> constant StateInit
+
+StateInit hashu -1 swap 2dup 2constant contract_addr
+."new bridge address = " 2dup .addr cr
+."Non-bounceable address (for init): " 2dup 5 .Addr cr
+."Bounceable address (for later access): " 4 .Addr cr
+
+<b b{1000100} s, contract_addr addr, b{000011} s, StateInit ref, b{0} s, b> dup constant extmessage
+2 boc+>B
+"bridge-create.boc" tuck B>file
+."(Saved bridge creating query to file " type .")" cr
