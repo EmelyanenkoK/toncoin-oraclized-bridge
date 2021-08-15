@@ -47,7 +47,7 @@ funcer({}, {
             "out_msgs": [
                 {
                     "type":"Reserve",
-                    "amount":`${(10) * 1e9 + 1099511627776}`,
+                    "amount":`${(10) * 1e9 + 100e9}`,
                     "mode":2
                 },
                 {

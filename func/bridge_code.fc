@@ -101,12 +101,11 @@ int calculate_fee(int msg_value, fees)  {
       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
       .store_uint(0xf00d, 32); ;; new bridge contract should recognize this opcode
     send_raw_message(msg.end_cell(), 1);
-;;    total_locked = 0; ;; todo: а вдруг с первого раза не получится, так хоть второй раз попробуем
 
   } elseif (operation == 5) { ;; get reward
 
-    ;; reserve total_locked + ~1024 [s]Grams[/s] Toncoins for fees ;; todo: подумать про 1024
-    raw_reserve(total_locked + (1 << 40), 2);
+    ;; reserve total_locked + 100 Toncoins for storage fees
+    raw_reserve(total_locked + 100000000000, 2);
     var msg = begin_cell()
       .store_uint(0x18, 6) ;; #int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddressInt = 0 1 1 0 00
       .store_slice(s_addr)
