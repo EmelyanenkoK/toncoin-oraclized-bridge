@@ -44,9 +44,9 @@ int calculate_fee(int msg_value, fees)  {
     if(is_text) {
       [int, int] OK = pair(2, 0x4f4b);
       tuple list = cons(OK, cons(encode_number_to_text(amount), null()));
-      return send_text_receipt_message(s_addr, list, 100000000, 2); ;; todo: всегда ли 0.1 хватит на комиссию?
+      return send_text_receipt_message(s_addr, list, 100000000, 3);
     } else {
-      return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 2);
+      return send_receipt_message(s_addr, 0x10000 + 3, query_id, 0, 100000000, 3);
     }
 }
 
