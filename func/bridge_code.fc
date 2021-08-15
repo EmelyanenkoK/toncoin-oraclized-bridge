@@ -137,7 +137,7 @@ int calculate_fee(int msg_value, fees)  {
   throw_if(299, in_msg.slice_empty?()); ;; inbound message has empty body
   
   int op = in_msg~load_uint(32);
-  (int bridge_address, int oracles_address, _) = get_bridge_config(); ;; todo: если config'а еще нет, то упадет, ОК ли это?
+  (int bridge_address, int oracles_address, _) = get_bridge_config();
   (int wc, int addr) = parse_std_addr(s_addr);
   var is_oracles = (wc == -1) & (oracles_address == addr);
 
