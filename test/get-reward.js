@@ -46,9 +46,14 @@ funcer({}, {
             "new_data":makeStorage(10 * 1e9),
             "out_msgs": [
                 {
+                    "type":"Reserve",
+                    "amount":`${(10) * 1e9 + 1099511627776}`,
+                    "mode":2
+                },
+                {
                     "type": "Internal",
                     "to": "-1:23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
-                    "amount": 1*1e9,
+                    "amount": 0,
                     "sendMode": 128,
                     "body": [
                     ],

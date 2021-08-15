@@ -219,11 +219,40 @@ send-mode ${("sendMode" in outMsg)? outMsg.sendMode : 3} <>
 `
 }
 
+const makeCheckReserveAction = (action) => {
+    return `
+4 B@+ swap B{36e6b809} B= not abort"Wrong reserve tag"
+8 u@+ swap =: send-mode
+Gram@+ swap =: actual-ton
+dup =: actual-collection
+${action.amount} =: expected-ton
+<b b{0} s, <b b> ref, b> <s =: expected-collection
+expected-ton actual-ton <> 
+{ ."Error: incorrect reserve amount" cr 
+  ."Expected " expected-ton . cr
+  ."Got      " actual-ton . cr
+0 halt } if
+
+expected-collection s>c hashu actual-collection s>c hashu <> 
+{ ."Error: incorrect currency collection" cr 
+  ."Expected " expected-collection csr. cr
+  ."Got      " actual-collection csr. cr
+0 halt } if
+
+send-mode ${action.mode} <> 
+{ ."Error: incorrect reserve mode" cr 
+  ."Expected " ${action.mode} . cr
+  ."Got      " send-mode . cr
+0 halt } if
+`
+}
 const makeCheckOutMsg = (outMsg) => {
     if (outMsg.type == "Internal") {
         return makeCheckOutIntMsg(outMsg);
     } else if (outMsg.type == "External") {
         return makeCheckOutExtMsg(outMsg);
+    } else if (outMsg.type == "Reserve") {
+        return makeCheckReserveAction(outMsg);
     } else {
         throw new Error('unsupported outMsg type "' + outMsg.type + '"');
     }
