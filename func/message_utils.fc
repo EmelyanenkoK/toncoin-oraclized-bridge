@@ -21,7 +21,7 @@
     .store_grams(grams)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
     .store_uint(0, 32)
-    .store_uint(0x4f4b, 16);
+    .store_uint(0x4f4b, 16); ;; "OK"
   send_raw_message(msg.end_cell(), mode);
 }
 
