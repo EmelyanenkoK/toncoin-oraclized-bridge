@@ -42,5 +42,5 @@
                         .store_uint(0, 64 + 32 + 2) ;; created_lt, created_at, init:Maybe, body:Either
                         .store_slice(data)
            .end_cell();
-  send_raw_message(msg, 2);
+  send_raw_message(msg, 0);
 }
