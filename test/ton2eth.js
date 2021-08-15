@@ -64,5 +64,13 @@ funcer({},{
                 }
             ]
         },
+        { // from oracles
+            "sender": "-1:23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8",
+            "amount": 10*1e9,
+            "body": [
+                "comment", `swapTo#${ethAddress}`
+            ],
+            exit_code: 306
+        },
     ]
 });
