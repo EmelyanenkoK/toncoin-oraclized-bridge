@@ -9,7 +9,7 @@
     return (0, 0);
   }
   slice ds = bridge_config.begin_parse();
-  if (ds.slice_bits() != 513) {
+  if (ds.slice_bits() < 512) {
     return (0, 0);
   }
   ;; wc always equals to -1
