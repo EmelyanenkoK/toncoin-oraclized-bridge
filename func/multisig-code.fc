@@ -304,7 +304,7 @@ cell get_public_keys() method_id {
   return (cnt + 1, mask);
 }
 
-int message_signed_by_id?(int id, int query_id) {
+int message_signed_by_id?(int id, int query_id) method_id {
   (_, int n, _, _, _, cell pending_queries, _) = unpack_state();
   (var cs, var f) = pending_queries.udict_get?(64, query_id);
   if (f) {
