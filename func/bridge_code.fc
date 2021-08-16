@@ -49,7 +49,11 @@ int calculate_fee(int msg_value, fees)  {
 }
 
 () process_comment_api_request (slice in_msg, int msg_value, slice s_addr) impure {
-    throw_unless(327, in_msg.slice_bits() == 56 + 16 + 20 * 2 * 8);
+    if (in_msg.slice_empty?() & (in_msg.slice_refs() == 1)) {
+      cell _cont = in_msg~load_ref();
+      in_msg = _cont.begin_parse();
+    }
+    throw_unless(327, in_msg.slice_bits() >= 56);
     int command = in_msg~load_uint(56);
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
     int destination_address = in_msg~load_text_hex_number(20);
