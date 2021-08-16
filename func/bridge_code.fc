@@ -53,10 +53,10 @@ int calculate_fee(int msg_value, fees)  {
       cell _cont = in_msg~load_ref();
       in_msg = _cont.begin_parse();
     }
-    throw_unless(327, in_msg.slice_bits() >= 56);
     int command = in_msg~load_uint(56);
     throw_unless(328, command == 32500882701840163); ;; "swapTo#" other commands are unsupported
     int destination_address = in_msg~load_text_hex_number(20);
+    in_msg.end_parse();
     return create_swap_from_ton(destination_address, msg_value, s_addr, 0, true);
 }
 
