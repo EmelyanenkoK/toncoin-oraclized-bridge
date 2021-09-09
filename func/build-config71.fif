@@ -7,8 +7,8 @@
 "config71" =: savefile
 
 begin-options
-    "<bridge-addr> <oracles-addr> <oracle1-addr> <oracle1-secp-pubkey> ... [-o<savefile>]" +cr +tab
-      +"Creates bag of cells suitable for uploading to TON config 71: oracle set for cross-chain bridge "
+    "<bridge-addr> <oracles-addr> <external-addr> <oracle1-addr> <oracle1-secp-pubkey> ... [-o<savefile>]" +cr +tab
+      +"Creates bag of cells suitable for uploading to TON config 71/72/73: oracle set for cross-chain bridge "
       +"and saves it into <savefile>.boc (" savefile $+ +".boc by default)"
     disable-digit-options generic-help-setopt
     "o" "--output" { =: savefile } short-long-option-arg
@@ -17,17 +17,17 @@ begin-options
       "Shows a help message" option-help
 parse-options
 
-$# 4 < ' usage if
-$# 2 mod ' usage if
-$# 2 - 2 / constant N
+$# 5 < ' usage if
+$# 1 - 2 mod ' usage if
+$# 3 - 2 / constant N
 $1 parse-smc-addr drop
 swap 1+ abort"Bridge address should be defined on masterchain"
 constant bridge-addr
 $2 parse-smc-addr drop 
 swap 1+ abort"Oracles address should be defined on masterchain"
 constant oracles-addr
-
-dictnew 3
+$3 parse-int =: external-addr
+dictnew 4
 { dup $() parse-smc-addr drop swap 1+ abort"Oracle address should be defined on masterchain"
   swap 1+ dup $() parse-int <b swap 256 u, b> <s swap 1+
   3 -roll swap rot 256 udict! drop swap
@@ -36,6 +36,7 @@ dictnew 3
 <b bridge-addr 256 u, 
    oracles-addr 256 u,
    oracles dict,
+   external-addr 256 u,
 b> constant config71
 
 ."Config71 built: " cr
