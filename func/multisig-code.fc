@@ -1,9 +1,9 @@
 ;; Simple wallet smart contract
 
 (int, int) get_bridge_config() impure inline_ref {
-  cell bridge_config = config_param(71);
+  cell bridge_config = config_param(72);
   if (bridge_config.cell_null?()) {
-    bridge_config = config_param(-71);
+    bridge_config = config_param(-72);
   }
   if (bridge_config.cell_null?()) {
     return (0, 0);
@@ -374,7 +374,7 @@ cell merge_inner_queries(cell a, cell b) method_id {
   .end_cell();
 }
 
-int get_lock_timeout() {
+int get_lock_timeout() method_id {
   (_, _, _, _, _, _, int spend_delay) = unpack_state();
   return spend_delay;
 }

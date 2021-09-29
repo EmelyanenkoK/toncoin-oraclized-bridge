@@ -1,7 +1,7 @@
 (int, int, cell) get_bridge_config() impure inline_ref {
-  cell bridge_config = config_param(71);
+  cell bridge_config = config_param(72);
   if (bridge_config.cell_null?()) {
-    bridge_config = config_param(-71);
+    bridge_config = config_param(-72);
   }
   throw_if(666, bridge_config.cell_null?());
   slice ds = bridge_config.begin_parse();
