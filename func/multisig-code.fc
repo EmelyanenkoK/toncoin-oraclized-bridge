@@ -71,10 +71,6 @@ _ unpack_owner_info(slice cs) inline_ref {
   return (cnt, cnt_bits);
 }
 
-() recv_internal(slice in_msg) impure {
-  ;; do nothing for internal messages
-}
-
 (int, cell, int, int) parse_msg(slice in_msg) inline_ref {
   int mode = in_msg~load_uint(8);
   var msg = in_msg~load_ref();
@@ -243,6 +239,20 @@ _ unpack_owner_info(slice cs) inline_ref {
     set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
   }
 }
+
+() recv_internal(cell in_msg_cell, slice in_msg) impure {
+  recv_external(in_msg);
+  var cs = in_msg_cell.begin_parse();
+  cs~skip_bits(4);
+  slice s_addr = cs~load_msg_addr();
+  var msg = begin_cell().store_uint(0x18, 6)
+                        .store_slice(s_addr)
+                        .store_grams(0)
+                        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .end_cell();
+  send_raw_message(msg, 64);
+}
+
 
 ;; Get methods
 ;; returns -1 for processed queries, 0 for unprocessed, 1 for unknown (forgotten)
