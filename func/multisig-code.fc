@@ -250,7 +250,7 @@ _ unpack_owner_info(slice cs) inline_ref {
                         .store_grams(0)
                         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-  send_raw_message(msg, 64);
+  send_raw_message(msg, 64 + 2);
 }
 
 
