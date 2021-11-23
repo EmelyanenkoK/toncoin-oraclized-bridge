@@ -30,7 +30,7 @@ funcer({}, {
         'bridge_code.fc',
     ],
     "configParams": {
-        71: [
+        72: [
             'cell', [
                 "uint256", bridgeAddress, // bridge_address
                 "uint256", multisigAddress, // oracles_address

@@ -23,7 +23,7 @@ funcer({}, {
         'bridge_code.fc',
     ],
     "configParams": {
-        71: [
+        72: [
             'cell', [
                 "uint256", "0x13dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // bridge_address
                 "uint256", "0x23dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8", // oracles_address
