@@ -114,6 +114,10 @@ _ unpack_owner_info(slice cs) inline_ref {
   set_data(pack_state(pending_queries, owner_infos, 1, k, n, wallet_id, spend_delay));
 }
 
+() recv_external() {
+  try_init();
+}
+
 (cell, cell) update_pending_queries(cell pending_queries, cell owner_infos, slice msg, int query_id, int creator_i, int cnt, int cnt_bits, int n, int k) impure inline_ref {
   if (cnt >= k) {
     accept_message();
@@ -147,7 +151,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   return (cells, bits);
 }
 
-() recv_external(slice in_msg) impure {
+() recv_internal(cell in_msg_cell, slice in_msg) impure {
   ;; empty message triggers init
   if (slice_empty?(in_msg)) {
     return try_init();
@@ -197,16 +201,12 @@ _ unpack_owner_info(slice cs) inline_ref {
 
   throw_if(41, ~ found? & (cnt < k) & (bound + ((60 * 60) << 32) > query_id));
 
-  set_gas_limit(100000);
-
   ifnot (found?) {
     owner_infos~udict_set_builder(8, root_i, pack_owner_info(public_key, flood));
   }
 
   (pending_queries, owner_infos) = update_pending_queries(pending_queries, owner_infos, msg, query_id, creator_i, cnt, cnt_bits, n, k);
   set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
-
-  commit();
 
   int need_save = 0;
   ifnot (cell_null?(signatures) | (cnt >= k)) {
@@ -216,7 +216,6 @@ _ unpack_owner_info(slice cs) inline_ref {
     need_save = -1;
   }
 
-  accept_message();
   bound -= (64 << 32);   ;; clean up records expired more than 64 seconds ago
   int old_last_cleaned = last_cleaned;
   do {
@@ -238,10 +237,7 @@ _ unpack_owner_info(slice cs) inline_ref {
   if (need_save) {
     set_data(pack_state(pending_queries, owner_infos, last_cleaned, k, n, wallet_id, spend_delay));
   }
-}
 
-() recv_internal(cell in_msg_cell, slice in_msg) impure {
-  recv_external(in_msg);
   var cs = in_msg_cell.begin_parse();
   cs~skip_bits(4);
   slice s_addr = cs~load_msg_addr();
