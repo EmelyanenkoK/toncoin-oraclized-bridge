@@ -1,3 +1,8 @@
+# TON-EVM Bridge
+
+TON-Ethereum Bridge in `master` branch.
+
+TON-BSC (Binance Smart Chain) Bridge in `bsc` branch.
 
 ## Prepare
 
