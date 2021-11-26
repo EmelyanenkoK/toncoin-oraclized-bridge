@@ -1,3 +1,9 @@
 .idea
 func/test.fif
 func/compiled.fif
+func/*.boc
+func/votes-collector.fif
+func/multisig-code.fif
+func/bridge_code2.fif
+func/multi.addr
+func/mainnet-bsc-new.addr
