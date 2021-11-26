@@ -120,7 +120,6 @@ _ unpack_owner_info(slice cs) inline_ref {
 
 (cell, cell) update_pending_queries(cell pending_queries, cell owner_infos, slice msg, int query_id, int creator_i, int cnt, int cnt_bits, int n, int k) impure inline_ref {
   if (cnt >= k) {
-    accept_message();
     (int bridge_address, int oracles_address) = get_bridge_config();
     (_, int my_addr) = parse_std_addr(my_address());
     var (mode, msg', wc, addr) = parse_msg(msg);
