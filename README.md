@@ -20,7 +20,7 @@ node test/index.js
 ## Compile Func
 
 ```
-func -SPA -o bridge_code2.fif stdlib.fc text_utils.fc message_utils.fc bridge-config.fc bridge_code.fc 
-func -SPA -o votes-collector.fif stdlib.fc message_utils.fc bridge-config.fc votes-collector.fc 
-func -SPA -o multisig-code.fif stdlib.fc multisig-code.fc 
+func -o bridge_code2.fif -SPA stdlib.fc text_utils.fc message_utils.fc bridge-config.fc bridge_code.fc
+func -o votes-collector.fif -SPA stdlib.fc message_utils.fc bridge-config.fc votes-collector.fc
+func -o multisig-code.fif -SPA stdlib.fc multisig-code.fc
 ```
