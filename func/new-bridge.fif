@@ -12,6 +12,7 @@
    2000000000 Gram,
    3000000000 Gram,
    25 14 u,
+   3 8 u, // chain_id, so that the address is not the same for different networks
 b> constant storage
 
 code storage null <b b{0011} s, 3 roll ref, rot ref, swap dict, b> constant StateInit

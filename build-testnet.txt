@@ -1,0 +1,40 @@
+__________________________________________________________________________
+bsc_testnet tag
+__________________________________________________________________________
+
+Multisig compiled by `func-0.3.0` (!)
+
+func -o multisig-code.fif -SPA stdlib.fc multisig-code.fc
+
+fift -s new-multisig.fif -1 3 1638630765 testnet-bsc-new 2 uf_public_keys_testnet
+
+new wallet address = -1:375679d7b9aa905754ecdaabd4afa6a069c334c9d3aec7934d6b599c53e7043b
+Non-bounceable address (for init): 0f83VnnXuaqQV1Ts2qvUr6agacM0ydOux5NNa1mcU-cEO_Ky
+Bounceable address (for later access): kf83VnnXuaqQV1Ts2qvUr6agacM0ydOux5NNa1mcU-cEO693
+__________________________________________________________________________
+
+Collector compiled by `func-0.0.99`
+
+func -o votes-collector.fif -SPA stdlib.fc message_utils.fc bridge-config.fc votes-collector.fc
+
+fift -s new-collector.fif
+
+new collector address = 0:c135f5780d0cd2cb334cc3a0424d2652a148be0b359c60db1f84ac680ea7ebc0
+Non-bounceable address (for init): UQDBNfV4DQzSyzNMw6BCTSZSoUi-CzWcYNsfhKxoDqfrwAaX
+Bounceable address (for later access): EQDBNfV4DQzSyzNMw6BCTSZSoUi-CzWcYNsfhKxoDqfrwFtS
+
+__________________________________________________________________________
+Bridge compiled by `func-0.0.99`
+
+func -o bridge_code2.fif -SPA stdlib.fc text_utils.fc message_utils.fc bridge-config.fc bridge_code.fc
+
+fift -s new-bridge.fif
+
+new bridge address = -1:c69899ed4c3a24c5f84b185d6346f3060bc25abf657991ea0d8f8125da3ce11e
+Non-bounceable address (for init): Uf_GmJntTDokxfhLGF1jRvMGC8Jav2V5keoNj4El2jzhHp_G
+Bounceable address (for later access): Ef_GmJntTDokxfhLGF1jRvMGC8Jav2V5keoNj4El2jzhHsID
+
+__________________________________________________________________________
+Config72:
+
+fift -s build-config71.fif Ef_GmJntTDokxfhLGF1jRvMGC8Jav2V5keoNj4El2jzhHsID kf83VnnXuaqQV1Ts2qvUr6agacM0ydOux5NNa1mcU-cEO693 0xdb15ffaf2c88f2d89db9365a5160d5b8c9448ea6 -1:5fc2c9192c4b860df613440b6fb7d93e984764688b249143ac1303f0d70cd793 0xe54cd631c97be0767172ad16904688962d09d2fe -1:233f3ae14d89682a04c2b0680414dc7b39d1feb09f7c7ad267c2b2154ac1711f 0xeb05e1b6ac0d574ef2cf29fdf01cc0ba3d8f9bf1 -1:9fc4608fb8f28d47a4f819c171350b8b5394f290b28402d9315847c0d70056cb 0xf636f40ebe17fb2a1343e5eeee9d13aa90888b51 -o bsc-testnet-config71.boc
