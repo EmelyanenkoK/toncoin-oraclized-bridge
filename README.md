@@ -1,4 +1,4 @@
-# TON-EVM Bridge
+# TON-EVM Toncoin Bridge
 
 TON-Ethereum Bridge in `master` branch.
 
